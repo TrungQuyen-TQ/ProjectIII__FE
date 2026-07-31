@@ -10,35 +10,23 @@ import {
 } from '@mui/material';
 import Link from 'next/link';
 import Head from 'next/head';
-
-// 1. Import MainLayout (chú ý điều chỉnh dấu ../ tùy theo vị trí thư mục của bạn)
 import MainLayout from '../../layouts/MainLayout';
 
 export default function LoginPage() {
   return (
     <>
       <Head>
-        <title>Login | thefront</title>
+        <title>Login | Tạp Hóa Store</title>
       </Head>
 
-      {/* 2. Bọc MainLayout bên ngoài toàn bộ Container */}
       <MainLayout>
-        {/* Đổi minHeight: '100vh' thành my: { xs: 4, md: 8 } để tránh bị xuất hiện thanh cuộn kép */}
-        <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'white', my: { xs: 4, md: 8 } }}>
+        {/* ĐỔI LỚN NHẤT TẠI ĐÂY: Dùng py thay vì my, thêm flexGrow: 1 */}
+        <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 } }}>
           <Container maxWidth="lg">
             <Grid container spacing={4} alignItems="center">
               
-              {/* Cột trái: Illustration */}
               <Grid item xs={12} md={6} sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
-                <Box 
-                  sx={{ 
-                    bgcolor: '#f7f9fc', 
-                    borderRadius: '32px', 
-                    p: 8, 
-                    width: '100%', 
-                    textAlign: 'center' 
-                  }}
-                >
+                <Box sx={{ bgcolor: '#f7f9fc', borderRadius: '32px', p: 8, width: '100%', textAlign: 'center' }}>
                   <Box 
                     component="img"
                     src="/loginImage.svg"
@@ -48,7 +36,6 @@ export default function LoginPage() {
                 </Box>
               </Grid>
 
-              {/* Cột phải: Form */}
               <Grid item xs={12} md={6}>
                 <Box sx={{ maxWidth: 450, mx: 'auto' }}>
                   <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 1.5 }}>
@@ -63,14 +50,7 @@ export default function LoginPage() {
 
                   <Box component="form" noValidate sx={{ mt: 1 }}>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Enter your email</Typography>
-                    <TextField
-                      fullWidth
-                      placeholder="Email *"
-                      variant="outlined"
-                      margin="normal"
-                      required
-                      sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                    />
+                    <TextField fullWidth placeholder="Email *" variant="outlined" margin="normal" required sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Enter your password</Typography>
@@ -78,35 +58,16 @@ export default function LoginPage() {
                         <MuiLink variant="body2" sx={{ fontWeight: 600, textDecoration: 'none' }}>Forgot your password?</MuiLink>
                       </Link>
                     </Box>
-                    <TextField
-                      fullWidth
-                      type="password"
-                      placeholder="Password *"
-                      variant="outlined"
-                      required
-                      sx={{ mb: 4, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                    />
+                    <TextField fullWidth type="password" placeholder="Password *" variant="outlined" required sx={{ mb: 4, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="body2">
                         Don't have an account yet?{' '}
-                        <Link href="/register" passHref legacyBehavior>
-                          <MuiLink sx={{ fontWeight: 700, textDecoration: 'none' }}>Sign up here.</MuiLink>
+                        <Link href="/auth/register" passHref legacyBehavior>
+                          <MuiLink sx={{ fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>Sign up here.</MuiLink>
                         </Link>
                       </Typography>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        size="large"
-                        sx={{ 
-                          px: 4, 
-                          py: 1.5, 
-                          borderRadius: '8px', 
-                          fontWeight: 700, 
-                          textTransform: 'none',
-                          boxShadow: '0 4px 14px 0 rgba(0,118,255,0.39)'
-                        }}
-                      >
+                      <Button type="submit" variant="contained" size="large" sx={{ px: 4, py: 1.5, borderRadius: '8px', fontWeight: 700, textTransform: 'none', boxShadow: '0 4px 14px 0 rgba(0,118,255,0.39)', bgcolor: '#17479d', '&:hover': { bgcolor: '#0f3170' } }}>
                         Login
                       </Button>
                     </Box>
