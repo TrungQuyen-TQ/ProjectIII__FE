@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap');
 /* IMPORT CSS GỐC CỦA THƯ VIỆN SLICK */
 @import "slick-carousel/slick/slick.css";
 @import "slick-carousel/slick/slick-theme.css";
@@ -47,9 +47,10 @@ a {
 }
 
 
-/* Ép toàn bộ thẻ HTML và body dùng font Roboto */
-html, body {
-  font-family: 'Roboto', Arial, sans-serif !important;
+/* Ép toàn bộ thẻ HTML và body dùng font Inter và Roboto */
+html,
+body {
+  font-family: 'Inter', 'Roboto', Arial, sans-serif !important;
 }
 
 /* Kìm chế tính năng tự ghi đè font của Material UI */
@@ -59,22 +60,25 @@ html, body {
 .MuiInputBase-input,
 .MuiMenuItem-root,
 .MuiListItemText-root {
-  font-family: 'Roboto', Arial, sans-serif !important;
+  font-family: 'Inter', 'Roboto', Arial, sans-serif !important;
 }
 
 
 
 /* HIỆU ỨNG CENTER MODE ĐỘC QUYỀN (GIỐNG THIÊN LONG) */
 .hero-slider-container .slick-slide {
-  padding: 0 10px; /* Khoảng cách giữa các ảnh */
+  padding: 0 10px;
+  /* Khoảng cách giữa các ảnh */
   transition: all 0.4s ease-in-out;
   opacity: 0.5;
-  transform: scale(0.85); /* Thu nhỏ ảnh 2 bên */
+  transform: scale(0.85);
+  /* Thu nhỏ ảnh 2 bên */
 }
 
 .hero-slider-container .slick-center {
   opacity: 1;
-  transform: scale(1); /* Giữ nguyên kích thước ảnh ở giữa */
+  transform: scale(1);
+  /* Giữ nguyên kích thước ảnh ở giữa */
   z-index: 10;
 }
 
@@ -82,6 +86,7 @@ html, body {
 .hero-slider-container .slick-dots {
   bottom: 15px;
 }
+
 .hero-slider-container .slick-dots li button:before {
   color: white;
   font-size: 12px;

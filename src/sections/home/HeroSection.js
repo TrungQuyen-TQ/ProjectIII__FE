@@ -6,12 +6,12 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
 // ĐÃ SỬA: Khai báo mảng chứa tên các file ảnh đã có trong thư mục public
 const bannerImages = [
-  "banner/bannerbupbe.png",
-  "banner/bannerthiepchucmung.png",
-  "banner/bannerluuniem.png",
-  "banner/bannercaptailieu.png",
-  "banner/bannertuixach.png",
-  "banner/bannerdolamdep.png"
+  "banner/bannerbupbe.avif",
+  "banner/bannerthiepchucmung.avif",
+  "banner/bannerluuniem.avif",
+  "banner/bannercaptailieu.avif",
+  "banner/bannertuixach.avif",
+  "banner/bannerdolamdep.avif"
 ];
 
 // --- NÚT MŨI TÊN BÊN TRÁI ---

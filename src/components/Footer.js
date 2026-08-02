@@ -1,160 +1,158 @@
 // src/components/Footer.js
 import React from 'react';
-import { 
-  Box, 
-  Container, 
-  Grid, 
-  Typography, 
-  Stack,
-  InputBase,
-  Button,
-  IconButton
+import {
+  Box, Container, Grid, Typography, Stack,
+  InputBase, Button, IconButton, Divider
 } from '@mui/material';
 import Link from 'next/link';
 
 // Icons
 import FacebookIcon from '@mui/icons-material/Facebook';
-import YouTubeIcon from '@mui/icons-material/YouTube';
+import GoogleIcon from '@mui/icons-material/Google';
+import TwitterIcon from '@mui/icons-material/Twitter';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import PhoneIcon from '@mui/icons-material/LocalPhone';
+import EmailIcon from '@mui/icons-material/Email';
 
 const COLORS = {
-  footerBg: '#17479d',     
-  darkerBg: '#0f3170',     
-  headingColor: '#fdd835', 
-  textLight: '#ffffff',    
-  textMuted: '#bce2ff'     
+  footerBg: '#17479d',
+  headingColor: '#fdd835',
+  textLight: '#ffffff',
+  textMuted: '#bce2ff'
 };
 
-// =========================================================
-// CÁC COMPONENT CON (ĐƯỢC CHIA NHỎ ĐỂ DỄ QUẢN LÝ)
-// =========================================================
+const navItems = [
+  { label: '🎁 Quà lưu niệm', subItems: ['Đồ Handmade', 'Khung ảnh', 'Móc khóa', 'Gấu bông'] },
+  { label: '💌 Thiệp chúc mừng', subItems: ['Sinh nhật', 'Lễ Tết', 'Tình yêu', '3D Pop-up'] },
+  { label: '🎎 Búp bê', subItems: ['Barbie', 'Len Amigurumi', 'Trang trí', 'Phụ kiện'] },
+  { label: '📁 Cặp tài liệu', subItems: ['Bìa còng', 'Cặp da', 'Clear bag', 'Trình ký'] },
+  { label: '👜 Túi xách', subItems: ['Balo', 'Túi Tote', 'Đeo chéo', 'Ví cầm tay'] },
+  { label: '💄 Mỹ phẩm', subItems: ['Son môi', 'Chăm sóc da', 'Trang điểm', 'Dụng cụ'] },
+];
 
-// 1. Component Cột Thương Hiệu & Đăng Ký
-const FooterBrand = () => (
-  <Grid item xs={12} sm={6} md={3}>
-    <Typography variant="h5" sx={{ fontWeight: 900, mb: 2, fontStyle: 'italic', letterSpacing: '-0.5px' }}>
-      Arts<span style={{ color: '#ff910d' }}>.</span> TẠP HÓA STORE
-    </Typography>
-    <Stack spacing={1.5}>
-      <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.6 }}>
-        Hệ thống mua sắm trực tuyến chuyên cung cấp văn phòng phẩm, quà lưu niệm, búp bê, túi xách và mỹ phẩm làm đẹp chính hãng.
-      </Typography>
-      <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.6, color: COLORS.textMuted }}>
-        Đồ án eProject: Online Shopping Cart - Ứng dụng thực tế quy trình TMĐT.
-      </Typography>
-    </Stack>
-    <Box sx={{ display: 'flex', mt: 3, width: '100%', borderRadius: '4px', overflow: 'hidden' }}>
-      <InputBase 
-        placeholder="Nhập email..." 
-        sx={{ bgcolor: 'white', px: 2, py: 1, flex: 1, fontSize: '0.85rem', color: '#333' }} 
-      />
-      <Button 
-        variant="contained" 
-        sx={{ bgcolor: COLORS.darkerBg, color: 'white', borderRadius: 0, px: 2, fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#081c42' }, boxShadow: 'none' }}
-      >
-        Đăng ký
-      </Button>
-    </Box>
-  </Grid>
+const policyLinks = [
+  { label: 'Hướng dẫn mua hàng', url: '/info/huong-dan-mua-hang' },
+  { label: 'Chính sách bảo mật', url: '/info/chinh-sach-bao-mat' },
+  { label: 'Điều khoản dịch vụ', url: '/info/dieu-khoan-dich-vu' },
+  { label: 'Quy định đổi trả', url: '/info/quy-dinh-doi-tra' },
+  { label: 'Câu hỏi thường gặp', url: '/info/cau-hoi-thuong-gap' },
+];
+
+// --- Sub-component cho Menu ---
+const MenuColumn = ({ items }) => (
+  <Stack spacing={4}>
+    {items.map((group, idx) => (
+      <Box key={idx}>
+        <Typography variant="body2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+          {group.label}
+        </Typography>
+        <Stack spacing={0.5}>
+          {group.subItems.map((sub, sIdx) => (
+            <Typography key={sIdx} variant="caption" sx={{ color: COLORS.textLight, cursor: 'pointer', '&:hover': { color: COLORS.headingColor } }}>
+              {sub}
+            </Typography>
+          ))}
+        </Stack>
+      </Box>
+    ))}
+  </Stack>
 );
-
-// 2. Component Cột Địa Chỉ Công Ty
-const FooterAddress = () => (
-  <Grid item xs={12} sm={6} md={3}>
-    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 2, textTransform: 'uppercase' }}>
-      ĐỊA CHỈ CÔNG TY
-    </Typography>
-    <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.6, mb: 2 }}>
-      <strong style={{ color: COLORS.headingColor }}>Trụ sở:</strong> 123 Đường Công Nghệ, Phường Sáng Tạo, Quận Cầu Giấy, TP. Hà Nội, Việt Nam
-    </Typography>
-    <Stack direction="row" spacing={1.5} sx={{ mt: 2 }}>
-      <IconButton sx={{ bgcolor: 'white', color: COLORS.footerBg, width: 34, height: 34, '&:hover': { bgcolor: '#e0e0e0' } }}>
-        <FacebookIcon fontSize="small" />
-      </IconButton>
-      <IconButton sx={{ bgcolor: 'white', color: COLORS.footerBg, width: 34, height: 34, '&:hover': { bgcolor: '#e0e0e0' } }}>
-        <YouTubeIcon fontSize="small" />
-      </IconButton>
-    </Stack>
-  </Grid>
-);
-
-// 3. Component Tái Sử Dụng (Dùng chung cho Cột Liên Kết như Hỗ trợ & Về chúng tôi)
-const FooterLinksColumn = ({ title, extraContent, links }) => (
-  <Grid item xs={12} sm={6} md={3}>
-    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 2, textTransform: 'uppercase' }}>
-      {title}
-    </Typography>
-    
-    {/* Render các phần nội dung phụ nếu có (VD: Hotline, Email) */}
-    {extraContent && <Box sx={{ mb: 2 }}>{extraContent}</Box>}
-
-    <Stack spacing={1}>
-      {links.map((item, idx) => (
-        <Link key={idx} href={item.url} passHref style={{ textDecoration: 'none', color: COLORS.textLight }}>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', transition: '0.2s', '&:hover': { color: COLORS.headingColor } }}>
-            - {item.label}
-          </Typography>
-        </Link>
-      ))}
-    </Stack>
-  </Grid>
-);
-
-// =========================================================
-// COMPONENT CHÍNH (MAIN FOOTER)
-// =========================================================
 
 export default function Footer() {
-  // Dữ liệu cho cột Hỗ trợ khách hàng
-  const supportLinks = [
-    { label: 'Thanh toán (Thẻ/Séc/VPP)', url: '#' },
-    { label: 'Hoàn tiền trong 7 ngày', url: '#' },
-    { label: 'Yêu cầu đổi/trả sản phẩm', url: '#' },
-    { label: 'Kiểm tra trạng thái đơn', url: '#' }
-  ];
-
-  const supportExtraContent = (
-    <Stack spacing={0.5}>
-      <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700 }}>Hotline: 1900 866 819</Typography>
-      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Thứ 2 - Thứ 6 (8h - 17h)</Typography>
-      <Typography variant="body2" sx={{ fontSize: '0.85rem', wordBreak: 'break-word' }}>
-        Email: <a href="mailto:support@taphoastore.vn" style={{ color: 'white', textDecoration: 'none' }}>support@taphoastore.vn</a>
-      </Typography>
-    </Stack>
-  );
-
-  // Dữ liệu cho cột Về Tạp Hóa Store
-  const aboutLinks = [
-    { label: 'Giới thiệu đồ án', url: '#' },
-    { label: 'Cổng quản lý Admin', url: '#' },
-    { label: 'Cổng nội bộ Nhân viên', url: '#' },
-    { label: 'Góp ý dịch vụ (Feedback)', url: '#' }
-  ];
-
   return (
-    <Box component="footer" sx={{ mt: 'auto', width: '100%' }}>
-      
-      {/* KHU VỰC CÁC CỘT */}
-      <Box sx={{ bgcolor: COLORS.footerBg, color: COLORS.textLight, pt: 8, pb: 6 }}>
-        <Container maxWidth="xl">
-          <Grid container spacing={4}>
-            
-            {/* Gọi các component con đã chia nhỏ */}
-            <FooterBrand />
-            <FooterAddress />
-            <FooterLinksColumn title="HỖ TRỢ KHÁCH HÀNG" extraContent={supportExtraContent} links={supportLinks} />
-            <FooterLinksColumn title="VỀ TẠP HÓA STORE" links={aboutLinks} />
+    <Box component="footer" suppressHydrationWarning sx={{ bgcolor: COLORS.footerBg, color: COLORS.textLight, pt: 8, width: '100%' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 4, lg: 6 }, display: "flex", justifyContent: "space-between", flexDirection: "column", alignItems: "center" }}>
 
+        <Grid container spacing={8}>
+
+          {/* CỘT 1: BRAND & SUBSCRIBE */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1, fontStyle: 'italic' }}>
+              Arts<span style={{ color: '#ff910d' }}>.</span> TẠP HÓA
+            </Typography>
+            <Typography variant="caption" display="block" sx={{ color: COLORS.textMuted, mb: 3 }}>
+              Hệ thống văn phòng phẩm & quà tặng sáng tạo hàng đầu.
+            </Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem' }}>SUBSCRIBE NOW</Typography>
+            <Box sx={{ borderBottom: '1px solid #fff', display: 'flex', mb: 2 }}>
+              <InputBase placeholder="Email của bạn..." sx={{ color: 'white', fontSize: '0.75rem', flex: 1 }} />
+            </Box>
+            <Button variant="contained" size="small" sx={{ bgcolor: 'black', color: 'white', textTransform: 'none', fontSize: '0.7rem' }}>
+              Đăng ký
+            </Button>
           </Grid>
-        </Container>
-      </Box>
 
-      {/* DẢI COPYRIGHT DƯỚI CÙNG */}
-      <Box sx={{ bgcolor: COLORS.darkerBg, py: 2, textAlign: 'center', color: COLORS.textMuted }}>
-        <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
-          2026 © Tạp Hóa Store - Bản quyền thuộc về Dự án eProject Online Shopping Cart.
-        </Typography>
-      </Box>
+          {/* CỘT 2, 3, 4: CHIA MENU RA */}
+          <Grid item xs={6} sm={4} md={2}>
+            <MenuColumn items={[navItems[0], navItems[1]]} />
+          </Grid>
 
+          <Grid item xs={6} sm={4} md={2}>
+            <MenuColumn items={[navItems[2], navItems[3]]} />
+          </Grid>
+
+          <Grid item xs={6} sm={4} md={2}>
+            <MenuColumn items={[navItems[4], navItems[5]]} />
+          </Grid>
+
+          {/* CỘT 5: CHÍNH SÁCH */}
+          <Grid item xs={6} sm={4} md={1.5}>
+            <Typography variant="body2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+              Thông tin
+            </Typography>
+            <Stack spacing={1}>
+              {policyLinks.map((link, i) => (
+                // ĐÃ SỬA: Đưa thẻ Link bọc ra ngoài Typography
+                <Link key={i} href={link.url} passHref style={{ textDecoration: 'none' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: COLORS.textLight,
+                      cursor: 'pointer',
+                      display: 'block',
+                      '&:hover': { color: COLORS.headingColor }
+                    }}
+                  >
+                    {link.label}
+                  </Typography>
+                </Link>
+              ))}
+            </Stack>
+          </Grid>
+
+          {/* CỘT 6: LIÊN HỆ */}
+          <Grid item xs={12} sm={6} md={1.5}>
+            <Typography variant="body2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+              Liên hệ
+            </Typography>
+            <Stack spacing={1.5} mb={3}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <PhoneIcon sx={{ mr: 1, fontSize: 16 }} />
+                <Typography variant="caption">+84 123 456 789</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', }}>
+                <EmailIcon sx={{ mr: 1, fontSize: 16 }} />
+                <Typography variant="caption">support@arts.vn</Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ marginTop: 3 }} >
+              {[FacebookIcon, GoogleIcon, TwitterIcon, InstagramIcon].map((Icon, i) => (
+                <IconButton key={i} size="small" sx={{ bgcolor: 'black', color: 'white', '&:hover': { bgcolor: '#333' }, width: 30, height: 30 }}>
+                  <Icon sx={{ fontSize: 16 }} />
+                </IconButton>
+              ))}
+            </Stack>
+          </Grid>
+
+        </Grid>
+
+        <Divider sx={{ mt: 6, borderColor: 'rgba(255,255,255,0.1)' }} />
+        <Box sx={{ py: 3, textAlign: 'center' }}>
+          <Typography variant="caption" sx={{ color: COLORS.textMuted }}>
+            © 2026 Arts Tạp Hóa Store - Giải pháp thương mại điện tử chuyên nghiệp.
+          </Typography>
+        </Box>
+      </Container>
     </Box>
   );
 }

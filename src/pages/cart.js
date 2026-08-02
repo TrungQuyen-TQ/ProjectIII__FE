@@ -1,14 +1,68 @@
 // src/pages/cart.js
-import React from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
-import { Box, Container, Typography, Button, Grid, Divider, IconButton } from '@mui/material';
-
-// SỬA LỖI TẠI ĐÂY: Đổi sang dùng DeleteIcon chuẩn (Standard)
-import DeleteIcon from '@mui/icons-material/Delete'; 
+import { Box, Container } from '@mui/material';
 
 import MainLayout from '../layouts/MainLayout';
+import CartItemList from '../sections/cart/CartItemList';
+import CartSummary from '../sections/cart/CartSummary';
+
+// Dữ liệu mẫu (Dummy data) - Đã chuyển giá tiền sang dạng SỐ (Number) để tính toán
+const initialCartItems = [
+  {
+    id: 1,
+    name: 'Bút Gel Thiên Long Pokémon GEL-045/PKM – Mực Xanh 0.5mm',
+    variant: 'Eevee',
+    price: 10800,
+    originalPrice: 12000,
+    discount: '-10%',
+    qty: 1,
+    image: 'https://images.unsplash.com/photo-1583485088034-697b5a624f47?w=150&q=80'
+  },
+  {
+    id: 2,
+    name: 'Bút Gel Thiên Long GOAL GEL-052 Quick Dry – 0.5mm',
+    variant: 'Xanh - Cán Xanh',
+    price: 54000,
+    originalPrice: 60000,
+    discount: '-10%',
+    qty: 5,
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150&q=80'
+  }
+];
+
+// Hàm hỗ trợ định dạng tiền tệ (VD: 10800 -> "10,800đ")
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+};
 
 export default function CartPage() {
+  const [cartItems, setCartItems] = useState(initialCartItems);
+
+  // --- CÁC HÀM XỬ LÝ SỰ KIỆN ---
+  const handleIncrease = (id) => {
+    setCartItems(items => items.map(item => item.id === id ? { ...item, qty: item.qty + 1 } : item));
+  };
+
+  const handleDecrease = (id) => {
+    setCartItems(items => items.map(item => item.id === id && item.qty > 1 ? { ...item, qty: item.qty - 1 } : item));
+  };
+
+  const handleRemove = (id) => {
+    setCartItems(items => items.filter(item => item.id !== id));
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
+  };
+
+  // --- TÍNH TOÁN ORDER SUMMARY ---
+  const totalItems = cartItems.reduce((sum, item) => sum + item.qty, 0);
+  const subTotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const shippingFee = subTotal > 0 ? 30000 : 0; // Phí ship giả định 30k (nếu giỏ hàng trống thì = 0)
+  const taxes = 0; // Thuế giả định = 0
+  const grandTotal = subTotal + shippingFee + taxes;
+
   return (
     <>
       <Head>
@@ -16,68 +70,39 @@ export default function CartPage() {
       </Head>
 
       <MainLayout>
-        <Container maxWidth="lg" sx={{ py: 6, flexGrow: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: '#17479d', mb: 4 }}>
-            Giỏ Hàng Của Bạn
-          </Typography>
-
-          <Grid container spacing={4}>
-            {/* Cột Danh sách sản phẩm */}
-            <Grid item xs={12} md={8}>
-              <Box sx={{ bgcolor: 'white', p: 3, borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                {/* Item 1 */}
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box component="img" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&q=80" sx={{ width: 80, height: 80, borderRadius: '8px', objectFit: 'cover' }} />
-                  <Box sx={{ flexGrow: 1, ml: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Son kem MAC cao cấp (Đồ làm đẹp)</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Số lượng: 1</Typography>
-                  </Box>
-                  <Typography variant="h6" sx={{ color: '#ff910d', fontWeight: 800, mx: 3 }}>450.000đ</Typography>
-                  {/* Đã đổi thành <DeleteIcon /> */}
-                  <IconButton color="error"><DeleteIcon /></IconButton>
-                </Box>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                {/* Item 2 */}
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box component="img" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&q=80" sx={{ width: 80, height: 80, borderRadius: '8px', objectFit: 'cover' }} />
-                  <Box sx={{ flexGrow: 1, ml: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Hộp quà tặng Sinh nhật</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Số lượng: 2</Typography>
-                  </Box>
-                  <Typography variant="h6" sx={{ color: '#ff910d', fontWeight: 800, mx: 3 }}>300.000đ</Typography>
-                  {/* Đã đổi thành <DeleteIcon /> */}
-                  <IconButton color="error"><DeleteIcon /></IconButton>
-                </Box>
+        <Box sx={{ bgcolor: '#f5f7fa', minHeight: '100vh', py: 6 }}>
+          <Container maxWidth="lg">
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 4 }}>
+              
+              {/* CỘT TRÁI: DANH SÁCH SẢN PHẨM */}
+              <Box sx={{ flex: { xs: '1 1 100%', md: '2 1 0%' }, width: '100%', minWidth: 0 }}>
+                <CartItemList
+                  cartItems={cartItems}
+                  onIncrease={handleIncrease}
+                  onDecrease={handleDecrease}
+                  onRemove={handleRemove}
+                  onClearCart={handleClearCart}
+                  formatPrice={formatPrice}
+                />
               </Box>
-            </Grid>
 
-            {/* Cột Thanh toán */}
-            <Grid item xs={12} md={4}>
-              <Box sx={{ bgcolor: 'white', p: 3, borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 3 }}>Tổng Đơn Hàng</Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography>Tạm tính:</Typography>
-                  <Typography sx={{ fontWeight: 600 }}>750.000đ</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography>Phí giao hàng:</Typography>
-                  <Typography sx={{ fontWeight: 600 }}>30.000đ</Typography>
-                </Box>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>Thành tiền:</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 900, color: '#ff910d' }}>780.000đ</Typography>
-                </Box>
-                <Button fullWidth variant="contained" size="large" sx={{ bgcolor: '#17479d', fontWeight: 800, py: 1.5, borderRadius: '8px', '&:hover': { bgcolor: '#0f3170' } }}>
-                  TIẾN HÀNH THANH TOÁN
-                </Button>
+              {/* CỘT PHẢI: ORDER SUMMARY */}
+              <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 0%' }, width: '100%', minWidth: 0, position: 'sticky', top: 120 }}>
+                <CartSummary
+                  cartItems={cartItems}
+                  totalItems={totalItems}
+                  subTotal={subTotal}
+                  shippingFee={shippingFee}
+                  taxes={taxes}
+                  grandTotal={grandTotal}
+                  formatPrice={formatPrice}
+                />
               </Box>
-            </Grid>
-          </Grid>
-        </Container>
+
+            </Box>
+          </Container>
+        </Box>
       </MainLayout>
     </>
   );
-}
+}
