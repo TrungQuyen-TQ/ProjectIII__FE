@@ -21,6 +21,9 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import PhoneIcon from '@mui/icons-material/LocalPhone';
 
+import { useSelector, useDispatch } from 'react-redux';
+import { logoutUser } from '../redux/slices/authSlice';
+
 const COLORS = {
   headerBg: '#17479d',
   headerColor: '#ffffff',
@@ -43,6 +46,18 @@ export default function Header() {
     setOpenSubMenu((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
+  const dispatch = useDispatch();
+
+  // Lấy dữ liệu user từ Redux
+  const { user, loading } = useSelector((state) => state.auth);
+
+  const handleLogout = () => {
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+      dispatch(logoutUser());
+    }
+  };
+
+
   // --- DỮ LIỆU MENU TRUNG TÂM ---
   const navItems = dataCategories.map(cat => ({
     label: `${cat.icon} ${cat.title}`,
@@ -50,19 +65,104 @@ export default function Header() {
     subItems: cat.subItems
   }));
 
+  // --- COMPONENT CON CHO USER ---
+  const UserLoggedIn = () => (
+    <Link href="/profile" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }}>
+        <Box sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          bgcolor: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 36, height: 36
+        }}>
+          <PersonIcon sx={{ fontSize: 18, color: 'white' }} />
+        </Box>
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', lineHeight: 1.2 }}>
+            Hi, {user.firstName || user.email}
+          </Typography>
+          <Typography
+            variant="caption"
+            onClick={handleLogout}
+            sx={{
+              color: 'rgba(255,255,255,0.7)', display: 'block', lineHeight: 1.2,
+              fontSize: '0.7rem', cursor: 'pointer', '&:hover': { color: COLORS.accent, textDecoration: 'underline' }
+            }}
+          >
+            Đăng xuất
+          </Typography>
+        </Box>
+      </Box>
+    </Link>
+
+  );
+
   const drawerContent = (
     <Box sx={{ width: 300, bgcolor: '#ffffff', height: '100%', overflowY: 'auto' }}>
-      <Box sx={{ bgcolor: COLORS.headerBg, color: COLORS.headerColor, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box component="img" src="/logo-art-white.svg" alt="Logo" sx={{ height: 'auto', width: '100px' }} />
-        <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}><CloseIcon /></IconButton>
-      </Box>
+      <Box sx={{ bgcolor: COLORS.headerBg, color: COLORS.headerColor, p: 2.5, display: 'flex', alignItems: 'center', gap: 2, position: 'relative' }}>
 
-      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Button component={Link} href="/auth/login" fullWidth variant="contained" startIcon={<PersonIcon />} sx={{ bgcolor: COLORS.primaryBlue, textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: COLORS.secondaryBlue }, boxShadow: 'none' }}>
-          Đăng nhập / Đăng ký
-        </Button>
+        {/* Vòng tròn Avatar */}
+        <Link href={user ? "/profile" : "/auth/login"} onClick={handleDrawerToggle} style={{ textDecoration: 'none' }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(255,255,255,0.2)',
+            borderRadius: '50%',
+            width: 44,
+            height: 44,
+            flexShrink: 0
+          }}>
+            <PersonIcon sx={{ fontSize: 24, color: 'white' }} />
+          </Box>
+        </Link>
+
+        {/* Khối Text thẳng hàng cột */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Link href={user ? "/profile" : "/auth/login"} onClick={handleDrawerToggle} style={{ textDecoration: 'none', color: 'white' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2, color: 'white', '&:hover': { textDecoration: 'underline' } }}>
+              {user ? (user.firstName ? `Hi, ${user.firstName}` : 'Tài khoản') : 'Tài khoản'}
+            </Typography>
+          </Link>
+
+          {user ? (
+            <Typography
+              variant="body2"
+              onClick={() => {
+                handleLogout();
+                handleDrawerToggle();
+              }}
+              sx={{
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                mt: 0.4,
+                alignSelf: 'flex-start'
+              }}
+            >
+              Đăng xuất
+            </Typography>
+          ) : (
+            <Link href="/auth/login" onClick={handleDrawerToggle} style={{ textDecoration: 'none' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'rgba(255,255,255,0.8)',
+                  fontSize: '0.8rem',
+                  textDecoration: 'underline',
+                  mt: 0.4,
+                  cursor: 'pointer'
+                }}
+              >
+                Đăng nhập / Đăng ký
+              </Typography>
+            </Link>
+          )}
+        </Box>
+
+        <IconButton onClick={handleDrawerToggle} sx={{ color: 'white', position: 'absolute', top: 12, right: 8 }}>
+          <CloseIcon sx={{ fontSize: 20 }} />
+        </IconButton>
       </Box>
-      <Divider />
 
       {/* MENU TRUYỀN THỐNG TRÊN MOBILE CÓ ACCORDION */}
       <List sx={{ pt: 0 }}>
@@ -107,7 +207,7 @@ export default function Header() {
           MAIN HEADER (THANH TÌM KIẾM CỐ ĐỊNH)
           ========================================= */}
         <Box sx={{ bgcolor: COLORS.headerBg, color: COLORS.headerColor, py: { xs: 1.2, md: 1.5 } }}>
-          <Container maxWidth="xl">
+          <Container maxWidth={false}>
             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', justifyContent: 'space-between', gap: 3 }}>
 
               <Link href="/" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', marginRight: '24px' }}>
@@ -166,7 +266,18 @@ export default function Header() {
                   </Box>
                 </Box>
 
-                <Button component={Link} href="/auth/login" startIcon={<PersonIcon sx={{ fontSize: 24 }} />} sx={{ color: COLORS.headerColor, textTransform: 'none', fontWeight: 600, border: '1px solid rgba(255,255,255,0.4)', px: 2, borderRadius: '8px', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', borderColor: 'white' } }}>Đăng nhập</Button>
+                {user ? (
+                  <UserLoggedIn />
+                ) : (
+                  <Button
+                    component={Link}
+                    href="/auth/login"
+                    startIcon={<PersonIcon />}
+                    sx={{ color: 'white', textTransform: 'none', fontWeight: 600, border: '1px solid rgba(255,255,255,0.4)', px: 2, borderRadius: '8px' }}
+                  >
+                    Đăng nhập
+                  </Button>
+                )}
                 <IconButton component={Link} href="/cart" aria-label="cart" sx={{ color: COLORS.headerColor, p: 0.5, ml: 0.5 }}>
                   <Badge badgeContent={1} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
                 </IconButton>
@@ -272,7 +383,7 @@ export default function Header() {
                 {/* MỤC KHUYẾN MÃI / OUTLET ĐẶC BIỆT GÓC PHẢI */}
                 <Box
                   component={Link}
-                  href="/khuyen-mai"
+                  href="/outlet"
                   sx={{
                     display: 'flex', alignItems: 'center', color: '#e53935',
                     py: 1.5, px: 2, fontWeight: 800, fontSize: '0.88rem',

@@ -8,20 +8,93 @@ import {
   Link as MuiLink,
   Container,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Alert
 } from '@mui/material';
 import Link from 'next/link';
 import Head from 'next/head';
 import MainLayout from '../../layouts/MainLayout';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { useDispatch } from 'react-redux';
+import { useRouter } from 'next/router';
+import { registerUser } from '../../redux/slices/authSlice';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const dispatch = useDispatch();
+  const router = useRouter();
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
   const handleClickShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!username || !email || !password || !confirmPassword) {
+      setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Mật khẩu nhập lại không khớp.');
+      return;
+    }
+
+    // Tách Họ và Tên thành FirstName, MiddleName, LastName cho khớp C# DTO
+    const nameParts = username.trim().split(/\s+/);
+    let firstName = '';
+    let middleName = '';
+    let lastName = '';
+
+    if (nameParts.length === 1) {
+      firstName = nameParts[0];
+    } else if (nameParts.length === 2) {
+      lastName = nameParts[0];
+      firstName = nameParts[1];
+    } else if (nameParts.length > 2) {
+      lastName = nameParts[0];
+      firstName = nameParts[nameParts.length - 1];
+      middleName = nameParts.slice(1, nameParts.length - 1).join(' ');
+    }
+
+    try {
+      setLoading(true);
+      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName });
+      const actionResult = await dispatch(registerUser({ 
+        Email: email, 
+        Password: password, 
+        FirstName: firstName, 
+        MiddleName: middleName, 
+        LastName: lastName 
+      }));
+      console.log('register.js: registerUser result:', actionResult);
+      if (registerUser.fulfilled.match(actionResult)) {
+        setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng sang trang đăng nhập...');
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 2000);
+      } else {
+        setErrorMsg(actionResult.payload || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error('register.js: Exception in handleSubmit:', err);
+      setErrorMsg('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -44,15 +117,32 @@ export default function RegisterPage() {
                     Vui lòng điền đầy đủ thông tin dưới đây.
                   </Typography>
 
-                  <Box component="form" noValidate>
+                  {errorMsg && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{errorMsg}</Alert>}
+                  {successMsg && <Alert severity="success" sx={{ mb: 2, borderRadius: '8px' }}>{successMsg}</Alert>}
+
+                  <Box component="form" noValidate onSubmit={handleSubmit}>
                     <Box sx={{ mt: 3 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Họ và Tên <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
-                      <TextField fullWidth placeholder="Họ và Tên *" variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
+                      <TextField
+                        fullWidth
+                        placeholder="Họ và Tên *"
+                        variant="outlined"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                      />
                     </Box>
 
                     <Box sx={{ mt: 3 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
-                      <TextField fullWidth placeholder="Email " variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
+                      <TextField
+                        fullWidth
+                        placeholder="Email "
+                        variant="outlined"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                      />
                     </Box>
 
                     <Box sx={{ mt: 3 }}>
@@ -62,6 +152,8 @@ export default function RegisterPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Mật khẩu"
                         variant="outlined"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         slotProps={{
                           input: {
@@ -88,6 +180,8 @@ export default function RegisterPage() {
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Nhập lại mật khẩu"
                         variant="outlined"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         slotProps={{
                           input: {
@@ -107,8 +201,17 @@ export default function RegisterPage() {
                       />
                     </Box>
 
-                    <Button type="submit" fullWidth variant="contained" size="large" sx={{ py: 1.5, mt: 4, mb: 3, borderRadius: '8px', fontWeight: 700, textTransform: 'none', boxShadow: '0 4px 14px 0 rgba(23,71,157,0.39)', bgcolor: '#17479d', '&:hover': { bgcolor: '#0f3170' } }}>
-                      Đăng ký
+
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      disabled={loading}
+                      sx={{ py: 1.5, mt: 4, mb: 3, borderRadius: '8px', fontWeight: 700, textTransform: 'none', boxShadow: '0 4px 14px 0 rgba(23,71,157,0.39)', bgcolor: '#17479d', '&:hover': { bgcolor: '#0f3170' } }}
+                    >
+                      {loading ? 'Đang xử lý...' : 'Đăng ký'}
                     </Button>
 
                     <Box sx={{ textAlign: 'center' }}>

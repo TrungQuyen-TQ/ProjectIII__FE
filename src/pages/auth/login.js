@@ -8,17 +8,61 @@ import {
   Link as MuiLink,
   Container,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Alert
 } from '@mui/material';
 import Link from 'next/link';
 import Head from 'next/head';
 import MainLayout from '../../layouts/MainLayout';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { useDispatch } from 'react-redux';
+import { useRouter } from 'next/router';
+import { loginUser } from '../../redux/slices/authSlice';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const dispatch = useDispatch();
+  const router = useRouter();
+
   const handleClickShowPassword = () => setShowPassword(!showPassword);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!email || !password) {
+      setErrorMsg('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('login.js: Dispatching loginUser with:', { Email: email, Password: password });
+      const actionResult = await dispatch(loginUser({ Email: email, Password: password }));
+      console.log('login.js: loginUser result:', actionResult);
+      if (loginUser.fulfilled.match(actionResult)) {
+        setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
+      } else {
+        setErrorMsg(actionResult.payload || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      }
+    } catch (err) {
+      console.error('login.js: Exception in handleSubmit:', err);
+      setErrorMsg('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -29,7 +73,7 @@ export default function LoginPage() {
       <MainLayout>
         {/* ĐỔI LỚN NHẤT TẠI ĐÂY: Dùng py thay vì my, thêm flexGrow: 1 */}
         <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', justifyContent: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 }, width: '100%' }}>
-          <Container maxWidth="lg" sx={{ width: '100%' }}>
+          <Container maxWidth="xl" sx={{ width: '100%' }}>
             <Grid container spacing={4} alignItems="center" justifyContent="center">
 
               <Grid item xs={12} lg={6} sx={{ display: { xs: 'none', lg: 'flex' }, justifyContent: 'center' }}>
@@ -55,9 +99,21 @@ export default function LoginPage() {
                     Đăng nhập để tiếp tục mua hàng của bạn.
                   </Typography>
 
-                  <Box component="form" noValidate sx={{ mt: 1 }}>
+                  {errorMsg && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{errorMsg}</Alert>}
+                  {successMsg && <Alert severity="success" sx={{ mb: 2, borderRadius: '8px' }}>{successMsg}</Alert>}
+
+                  <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Nhập email của bạn</Typography>
-                    <TextField fullWidth placeholder="Email *" variant="outlined" margin="normal" required sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
+                    <TextField
+                      fullWidth
+                      placeholder="Email *"
+                      variant="outlined"
+                      margin="normal"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                    />
 
                     <Box >
                       <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Nhập mật khẩu của bạn</Typography>
@@ -69,6 +125,8 @@ export default function LoginPage() {
                       variant="outlined"
                       margin="normal"
                       required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       sx={{ mb: 4, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                       slotProps={{
                         input: {
@@ -87,8 +145,15 @@ export default function LoginPage() {
                       }}
                     />
 
-                    <Button type="submit" fullWidth variant="contained" size="large" sx={{ py: 1.5, mb: 3, borderRadius: '8px', fontWeight: 700, textTransform: 'none', boxShadow: '0 4px 14px 0 rgba(23,71,157,0.39)', bgcolor: '#17479d', '&:hover': { bgcolor: '#0f3170' } }}>
-                      Đăng nhập
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      disabled={loading}
+                      sx={{ py: 1.5, mb: 3, borderRadius: '8px', fontWeight: 700, textTransform: 'none', boxShadow: '0 4px 14px 0 rgba(23,71,157,0.39)', bgcolor: '#17479d', '&:hover': { bgcolor: '#0f3170' } }}
+                    >
+                      {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                     </Button>
 
                     <Box sx={{ textAlign: 'center' }}>

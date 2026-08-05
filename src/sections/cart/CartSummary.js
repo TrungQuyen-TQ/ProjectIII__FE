@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button, Stack, Divider } from '@mui/material';
+import Link from 'next/link';
 
 export default function CartSummary({
   cartItems,
@@ -47,6 +48,8 @@ export default function CartSummary({
       </Box>
 
       <Button
+        component={Link}
+        href="/checkout"
         fullWidth
         variant="contained"
         size="large"

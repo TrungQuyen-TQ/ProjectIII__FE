@@ -1,0 +1,335 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Box, Container, Paper, Typography, Avatar,
+    Button, Breadcrumbs, Divider, List, ListItem, ListItemButton,
+    ListItemIcon, ListItemText
+} from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
+import { useRouter } from 'next/router';
+import { logoutUser, updateUserAddress } from '../../redux/slices/authSlice';
+import Link from 'next/link';
+
+// Icons
+import PersonIcon from '@mui/icons-material/Person';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import MainLayout from '@/layouts/MainLayout';
+
+// Import components con từ folder sections/profile
+import ProfileInfo from '../../sections/profile/ProfileInfo';
+import AddressBook from '../../sections/profile/AddressBook';
+import OrderHistory from '../../sections/profile/OrderHistory';
+
+const COLORS = {
+    primaryBlue: '#17479d',       // Tone xanh đặc trưng của Arts
+    activeOrange: '#ff910d',      // Tone cam đặc trưng
+    bgLight: '#e5f2fb',          // Tone nền siêu nhạt ăn nhập trang chủ
+    borderGray: '#e0eaf5',
+    textMuted: '#666'
+};
+
+export default function ProfilePage() {
+    const dispatch = useDispatch();
+    const router = useRouter();
+    const { user } = useSelector((state) => state.auth);
+
+    // State quản lý Tab hiện tại - Mặc định là Thông tin tài khoản
+    const [activeTab, setActiveTab] = useState('info');
+
+    // States quản lý biểu mẫu địa chỉ chi tiết (Sổ địa chỉ)
+    const [addressForm, setAddressForm] = useState({
+        province: user?.address?.province || '',
+        district: user?.address?.district || '',
+        ward: user?.address?.ward || '',
+        streetAddress: user?.address?.streetAddress || ''
+    });
+
+    const [provinces, setProvinces] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [wards, setWards] = useState([]);
+    const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
+    const [selectedDistrictCode, setSelectedDistrictCode] = useState('');
+
+    // Khởi tạo danh sách Tỉnh/Thành và tự động đổ dữ liệu nếu user đã có địa chỉ trước đó
+    useEffect(() => {
+        if (!user) return;
+        fetch('https://provinces.open-api.vn/api/p/')
+            .then(res => res.json())
+            .then(data => {
+                setProvinces(data);
+                
+                // Nếu đã có địa chỉ lưu sẵn trong profile, ánh xạ code để hiển thị đúng ô chọn
+                if (user?.address?.province) {
+                    const foundProv = data.find(p => p.name === user.address.province);
+                    if (foundProv) {
+                        setSelectedProvinceCode(foundProv.code);
+                        
+                        // Gọi tiếp Quận/Huyện
+                        fetch(`https://provinces.open-api.vn/api/p/${foundProv.code}?depth=2`)
+                            .then(r => r.json())
+                            .then(distData => {
+                                const distList = distData.districts || [];
+                                setDistricts(distList);
+                                
+                                if (user.address.district) {
+                                    const foundDist = distList.find(d => d.name === user.address.district);
+                                    if (foundDist) {
+                                        setSelectedDistrictCode(foundDist.code);
+                                        
+                                        // Gọi tiếp Phường/Xã
+                                        fetch(`https://provinces.open-api.vn/api/d/${foundDist.code}?depth=2`)
+                                            .then(r => r.json())
+                                            .then(wData => {
+                                                setWards(wData.wards || []);
+                                            });
+                                    }
+                                }
+                            });
+                    }
+                }
+            })
+            .catch(err => console.error("Lỗi tải tỉnh thành:", err));
+    }, [user]);
+
+    const handleLogout = () => {
+        if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+            dispatch(logoutUser());
+            router.push('/');
+        }
+    };
+
+    // Thay đổi tỉnh ở Sổ địa chỉ
+    const handleProvinceChange = (e) => {
+        const provinceCode = e.target.value;
+        setSelectedProvinceCode(provinceCode);
+        
+        const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
+        setAddressForm(prev => ({
+            ...prev,
+            province: provinceName,
+            district: '',
+            ward: ''
+        }));
+        
+        setSelectedDistrictCode('');
+        setWards([]);
+        setDistricts([]);
+
+        fetch(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`)
+            .then(res => res.json())
+            .then(data => setDistricts(data.districts || []))
+            .catch(err => console.error("Lỗi tải quận huyện:", err));
+    };
+
+    // Thay đổi huyện ở Sổ địa chỉ
+    const handleDistrictChange = (e) => {
+        const districtCode = e.target.value;
+        setSelectedDistrictCode(districtCode);
+
+        const districtName = districts.find(d => d.code === districtCode)?.name || '';
+        setAddressForm(prev => ({
+            ...prev,
+            district: districtName,
+            ward: ''
+        }));
+
+        setWards([]);
+
+        fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`)
+            .then(res => res.json())
+            .then(data => setWards(data.wards || []))
+            .catch(err => console.error("Lỗi tải phường xã:", err));
+    };
+
+    // Thay đổi xã ở Sổ địa chỉ
+    const handleWardChange = (e) => {
+        const wardName = e.target.value;
+        setAddressForm(prev => ({
+            ...prev,
+            ward: wardName
+        }));
+    };
+
+    const handleSaveAddress = () => {
+        if (!addressForm.province || !addressForm.district || !addressForm.ward || !addressForm.streetAddress) {
+            alert("Vui lòng điền đầy đủ các trường thông tin địa chỉ!");
+            return;
+        }
+        
+        dispatch(updateUserAddress(addressForm));
+        alert("Đã cập nhật sổ địa chỉ thành công! Khi thanh toán đơn hàng, địa chỉ này sẽ được tự động điền sẵn.");
+    };
+
+    // Lấy chữ cái đầu (Ví dụ: Ngô Đức Huy -> NĐ)
+    const getInitials = () => {
+        if (!user) return "U";
+        const first = user.firstName?.charAt(0) || "";
+        const last = user.lastName?.charAt(0) || "";
+        return (last + first).toUpperCase();
+    };
+
+    const getFullName = () => {
+        if (!user) return "";
+        const parts = [];
+        if (user.lastName) parts.push(user.lastName);
+        if (user.middleName) parts.push(user.middleName);
+        if (user.firstName) parts.push(user.firstName);
+        return parts.join(' ') || user.email;
+    };
+
+    if (!user) {
+        return (
+            <MainLayout>
+                <Container maxWidth="xl" sx={{ py: 10, textAlign: 'center' }}>
+                    <Typography variant="h6" sx={{ mb: 3 }}>Vui lòng đăng nhập để xem thông tin cá nhân.</Typography>
+                    <Button variant="contained" component={Link} href="/auth/login" sx={{ bgcolor: COLORS.primaryBlue }}>Đăng nhập ngay</Button>
+                </Container>
+            </MainLayout>
+        );
+    }
+
+    // Danh sách Menu dọc bên trái
+    const menuItems = [
+        { id: 'info', label: 'Thông tin tài khoản', icon: <PersonIcon fontSize="small" /> },
+        { id: 'address', label: 'Sổ địa chỉ (1)', icon: <LocationOnIcon fontSize="small" /> },
+        { id: 'orders', label: 'Danh sách đơn hàng', icon: <ShoppingBagIcon fontSize="small" /> }
+    ];
+
+    const getTabName = () => {
+        const found = menuItems.find(item => item.id === activeTab);
+        return found ? found.label : 'Tài khoản';
+    };
+
+    return (
+        <MainLayout>
+            <Box sx={{ bgcolor: COLORS.bgLight, minHeight: '100vh', pb: { xs: 6, md: 10 } }}>
+                
+                {/* 1. BREADCRUMBS PHÍA TRÊN */}
+                <Box sx={{ bgcolor: '#ffffff', py: 1.5, mb: 4, borderBottom: '1px solid #e0eaf5' }}>
+                    <Container maxWidth="xl">
+                        <Breadcrumbs aria-label="breadcrumb" sx={{ fontSize: '0.88rem' }}>
+                            <Link href="/" style={{ textDecoration: 'none', color: '#17479d', fontWeight: 500 }}>
+                                Trang chủ
+                            </Link>
+                            <Typography color="text.secondary" sx={{ fontSize: '0.88rem' }}>Tài khoản</Typography>
+                            <Typography color="text.primary" sx={{ fontWeight: 600, fontSize: '0.88rem' }}>{getTabName()}</Typography>
+                        </Breadcrumbs>
+                    </Container>
+                </Box>
+
+                <Container maxWidth="xl">
+                    {/* Bố cục Flexbox thuần CSS */}
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'flex-start' }}>
+
+                        {/* 2. CỘT MENU TRÁI (Chiếm 1/3 ~ 4 phần) */}
+                        <Box sx={{ width: { xs: '100%', md: '33.333%' }, flexShrink: 0 }}>
+                            <Paper elevation={0} sx={{ p: 3, borderRadius: '16px', border: `1px solid ${COLORS.borderGray}`, bgcolor: '#ffffff' }}>
+                                {/* Avatar & Lời chào */}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                                    <Avatar sx={{ width: 80, height: 80, bgcolor: COLORS.activeOrange, fontSize: '2rem', mb: 2, fontWeight: 800, color: 'white' }}>
+                                        {getInitials()}
+                                    </Avatar>
+                                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#555', fontWeight: 500, textAlign: 'center' }}>
+                                        Xin chào, <span style={{ fontWeight: 700, color: COLORS.primaryBlue }}>{getFullName()}</span>
+                                    </Typography>
+                                </Box>
+
+                                <Divider sx={{ mb: 2 }} />
+
+                                {/* List Menu dọc */}
+                                <List sx={{ p: 0 }}>
+                                    {menuItems.map((item) => (
+                                        <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
+                                            <ListItemButton
+                                                onClick={() => setActiveTab(item.id)}
+                                                sx={{
+                                                    borderRadius: '8px',
+                                                    py: 1.2,
+                                                    bgcolor: activeTab === item.id ? COLORS.activeOrange : COLORS.primaryBlue,
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        bgcolor: activeTab === item.id ? '#e07d00' : '#0f3170',
+                                                    }
+                                                }}
+                                            >
+                                                <ListItemIcon sx={{ color: 'white', minWidth: 35 }}>
+                                                    {item.icon}
+                                                </ListItemIcon>
+                                                <ListItemText
+                                                    primary={item.label}
+                                                    primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 700 }}
+                                                />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))}
+
+                                    {/* Nút Đăng xuất */}
+                                    <ListItem disablePadding sx={{ mt: 1 }}>
+                                        <ListItemButton
+                                            onClick={handleLogout}
+                                            sx={{
+                                                borderRadius: '8px',
+                                                py: 1.2,
+                                                bgcolor: COLORS.primaryBlue,
+                                                color: 'white',
+                                                '&:hover': {
+                                                    bgcolor: '#0f3170',
+                                                }
+                                            }}
+                                        >
+                                            <ListItemIcon sx={{ color: 'white', minWidth: 35 }}>
+                                                <ExitToAppIcon fontSize="small" />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary="Đăng xuất"
+                                                primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 700 }}
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                </List>
+                            </Paper>
+                        </Box>
+
+                        {/* 3. CỘT NỘI DUNG PHẢI (Chiếm 2/3 ~ 8 phần) */}
+                        <Box sx={{ flexGrow: 1, width: '100%' }}>
+                            <Paper elevation={0} sx={{ p: 4, borderRadius: '16px', border: `1px solid ${COLORS.borderGray}`, bgcolor: '#ffffff', minHeight: 450 }}>
+                                
+                                {/* TAB 1: THÔNG TIN TÀI KHOẢN */}
+                                {activeTab === 'info' && (
+                                    <ProfileInfo user={user} />
+                                )}
+
+                                {/* TAB 2: SỔ ĐỊA CHỈ */}
+                                {activeTab === 'address' && (
+                                    <AddressBook 
+                                        user={user}
+                                        addressForm={addressForm}
+                                        setAddressForm={setAddressForm}
+                                        provinces={provinces}
+                                        districts={districts}
+                                        wards={wards}
+                                        selectedProvinceCode={selectedProvinceCode}
+                                        selectedDistrictCode={selectedDistrictCode}
+                                        handleProvinceChange={handleProvinceChange}
+                                        handleDistrictChange={handleDistrictChange}
+                                        handleWardChange={handleWardChange}
+                                        handleSaveAddress={handleSaveAddress}
+                                        getFullName={getFullName}
+                                    />
+                                )}
+
+                                {/* TAB 3: DANH SÁCH ĐƠN HÀNG */}
+                                {activeTab === 'orders' && (
+                                    <OrderHistory />
+                                )}
+
+                            </Paper>
+                        </Box>
+
+                    </Box>
+                </Container>
+            </Box>
+        </MainLayout>
+    );
+}
