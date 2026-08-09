@@ -23,42 +23,42 @@ export default function PaymentMethod({ paymentMethod, setPaymentMethod }) {
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                 >
-                    <Box sx={{ 
-                        p: 2, 
-                        mb: 2, 
-                        borderRadius: '10px', 
+                    <Box sx={{
+                        p: 2,
+                        mb: 2,
+                        borderRadius: '10px',
                         border: paymentMethod === 'cod' ? '2px solid #17479d' : '1px solid #e0e0e0',
                         bgcolor: paymentMethod === 'cod' ? '#f4f8fc' : 'white',
                         transition: 'all 0.2s'
                     }}>
-                        <FormControlLabel 
-                            value="cod" 
-                            control={<Radio color="primary" />} 
+                        <FormControlLabel
+                            value="cod"
+                            control={<Radio color="primary" />}
                             label={
                                 <Box>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Thanh toán khi nhận hàng (COD)</Typography>
                                     <Typography variant="caption" color="text.secondary">Bạn sẽ thanh toán bằng tiền mặt cho shipper khi nhận được hàng.</Typography>
                                 </Box>
-                            } 
+                            }
                         />
                     </Box>
 
-                    <Box sx={{ 
-                        p: 2, 
-                        borderRadius: '10px', 
+                    <Box sx={{
+                        p: 2,
+                        borderRadius: '10px',
                         border: paymentMethod === 'bank' ? '2px solid #17479d' : '1px solid #e0e0e0',
                         bgcolor: paymentMethod === 'bank' ? '#f4f8fc' : 'white',
                         transition: 'all 0.2s'
                     }}>
-                        <FormControlLabel 
-                            value="bank" 
-                            control={<Radio color="primary" />} 
+                        <FormControlLabel
+                            value="bank"
+                            control={<Radio color="primary" />}
                             label={
                                 <Box>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Chuyển khoản ngân hàng</Typography>
                                     <Typography variant="caption" color="text.secondary">Chuyển khoản qua số tài khoản ngân hàng hoặc quét mã QR thanh toán nhanh.</Typography>
                                 </Box>
-                            } 
+                            }
                         />
                     </Box>
                 </RadioGroup>

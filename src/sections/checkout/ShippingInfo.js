@@ -128,8 +128,8 @@ export default function ShippingInfo({
                     </FormControl>
                 </Box>
                 
-                {/* Địa chỉ chi tiết (Cùng hàng với Phường / Xã) */}
-                <Box>
+                {/* Địa chỉ chi tiết */}
+                <Box sx={{ gridColumn: { xs: 'span 1', sm: 'span 2' } }}>
                     <TextField
                         required
                         fullWidth

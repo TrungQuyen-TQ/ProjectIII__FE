@@ -39,7 +39,7 @@ export default function ProductCategorySection() {
     responsive: [
       { breakpoint: 1200, settings: { slidesToShow: 4 } },
       { breakpoint: 900, settings: { slidesToShow: 3 } },
-      { breakpoint: 600, settings: { slidesToShow: 2, arrows: false } }, 
+      { breakpoint: 600, settings: { slidesToShow: 2, arrows: false } },
     ]
   };
 
@@ -47,31 +47,31 @@ export default function ProductCategorySection() {
     // Đã giảm py (padding dọc) từ { xs: 4, md: 8 } xuống { xs: 3, md: 5 } để bớt thừa màu Aqua
     <Box sx={{ bgcolor: '#e5f2fb', py: { xs: 3, md: 5 } }}>
       <Container maxWidth="xl">
-        
+
         {categories.map((cat, index) => (
-          <Box 
-            key={index} 
-            sx={{ 
-              bgcolor: 'white', 
-              borderRadius: '24px', 
+          <Box
+            key={index}
+            sx={{
+              bgcolor: 'white',
+              borderRadius: '24px',
               p: { xs: 2, md: 3 },  // Giảm bớt khoảng trống bên trong khối trắng
               mb: 4,                // Giảm bớt khoảng cách giữa các khối
-              boxShadow: '0 4px 20px rgba(0,0,0,0.03)' 
+              boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
             }}
           >
-            
+
             {/* 1. BANNER RIÊNG CHO TỪNG DANH MỤC */}
             {cat.bannerUrl && (
               <Box sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
-                <Box 
-                  component="img" 
-                  src={cat.bannerUrl} 
-                  alt={cat.title} 
-                  sx={{ 
-                    width: '100%', 
+                <Box
+                  component="img"
+                  src={cat.bannerUrl}
+                  alt={cat.title}
+                  sx={{
+                    width: '100%',
                     height: 'auto', // Tự động lấy chiều cao theo tỷ lệ gốc của ảnh
-                    display: 'block' 
-                  }} 
+                    display: 'block'
+                  }}
                 />
               </Box>
             )}
@@ -83,13 +83,13 @@ export default function ProductCategorySection() {
               </Typography>
               <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', maxWidth: '100%', pb: { xs: 1, md: 0 } }}>
                 {cat.subTabs.map((tab, idx) => (
-                  <Button 
-                    key={idx} variant="outlined" size="small" 
-                    sx={{ 
+                  <Button
+                    key={idx} variant="outlined" size="small"
+                    sx={{
                       borderRadius: '50px', whiteSpace: 'nowrap', fontWeight: 600, textTransform: 'none',
-                      color: idx === cat.subTabs.length - 1 ? '#ff910d' : '#17479d', 
+                      color: idx === cat.subTabs.length - 1 ? '#ff910d' : '#17479d',
                       borderColor: idx === cat.subTabs.length - 1 ? '#ff910d' : '#e0e0e0',
-                      '&:hover': { borderColor: '#17479d', bgcolor: 'rgba(23,71,157,0.05)' } 
+                      '&:hover': { borderColor: '#17479d', bgcolor: 'rgba(23,71,157,0.05)' }
                     }}
                   >
                     {tab}
@@ -99,13 +99,13 @@ export default function ProductCategorySection() {
             </Box>
 
             {/* 3. LƯỚI SẢN PHẨM TRƯỢT NGANG */}
-            <Box sx={{ mx: { xs: -1, md: -1.5 } }}> 
+            <Box sx={{ mx: { xs: -1, md: -1.5 } }}>
               <Slider {...sliderSettings}>
                 {products.map((product) => (
                   <Box key={product.id} sx={{ px: { xs: 1, md: 1.5 }, pb: 2, pt: 1 }}>
-                    <ProductCard 
-                      product={product} 
-                      onQuickView={handleOpenQuickView} 
+                    <ProductCard
+                      product={product}
+                      onQuickView={handleOpenQuickView}
                     />
                   </Box>
                 ))}
@@ -115,8 +115,8 @@ export default function ProductCategorySection() {
         ))}
 
         {/* POPUP (MODAL) XEM NHANH SẢN PHẨM */}
-        <QuickViewDialog 
-          open={Boolean(quickViewProduct)} 
+        <QuickViewDialog
+          open={Boolean(quickViewProduct)}
           onClose={handleCloseQuickView}
           product={quickViewProduct}
         />

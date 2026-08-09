@@ -19,6 +19,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/router';
 import { registerUser } from '../../redux/slices/authSlice';
+import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -43,11 +44,13 @@ export default function RegisterPage() {
     setSuccessMsg('');
 
     if (!username || !email || !password || !confirmPassword) {
+      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       return;
     }
 
     if (password !== confirmPassword) {
+      toast.error('Mật khẩu nhập lại không khớp.');
       setErrorMsg('Mật khẩu nhập lại không khớp.');
       return;
     }
@@ -81,15 +84,19 @@ export default function RegisterPage() {
       }));
       console.log('register.js: registerUser result:', actionResult);
       if (registerUser.fulfilled.match(actionResult)) {
+        toast.success('Đăng ký tài khoản thành công!');
         setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng sang trang đăng nhập...');
         setTimeout(() => {
           router.push('/auth/login');
         }, 2000);
       } else {
-        setErrorMsg(actionResult.payload || 'Đăng ký thất bại. Vui lòng thử lại.');
+        const errorText = actionResult.payload || 'Đăng ký thất bại. Vui lòng thử lại.';
+        toast.error(errorText);
+        setErrorMsg(errorText);
       }
     } catch (err) {
       console.error('register.js: Exception in handleSubmit:', err);
+      toast.error('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
       setErrorMsg('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
@@ -104,11 +111,11 @@ export default function RegisterPage() {
 
       <MainLayout>
         {/* ĐỔI LỚN NHẤT TẠI ĐÂY: Dùng py thay vì my, thêm flexGrow: 1 */}
-        <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', justifyContent: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 }, width: '100%' }}>
-          <Container maxWidth="lg" sx={{ width: '100%' }}>
-            <Grid container spacing={4} alignItems="center" justifyContent="center">
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 } }}>
+          <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'center', justifyContent: 'center' }}>
 
-              <Grid item xs={12} lg={6} sx={{ order: { xs: 2, lg: 1 }, display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ width: { xs: '100%', md: '50%' }, order: { xs: 2, md: 1 }, display: 'flex', justifyContent: 'center' }}>
                 <Box sx={{ width: '100%', maxWidth: 500, mx: 'auto' }}>
                   <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
                     Đăng ký tài khoản
@@ -229,9 +236,9 @@ export default function RegisterPage() {
                     </Typography>
                   </Box>
                 </Box>
-              </Grid>
+              </Box>
 
-              <Grid item xs={12} lg={6} sx={{ display: { xs: 'none', lg: 'flex' }, justifyContent: 'center', order: { xs: 1, lg: 2 } }}>
+              <Box sx={{ width: { xs: '100%', md: '50%' }, display: { xs: 'none', md: 'flex' }, justifyContent: 'center', order: { xs: 1, md: 2 } }}>
                 <Box sx={{ bgcolor: '#f7f9fc', borderRadius: '32px', p: 8, width: '100%', textAlign: 'center' }}>
                   <Box
                     component="img"
@@ -240,9 +247,9 @@ export default function RegisterPage() {
                     sx={{ width: '100%', maxWidth: 450, height: 'auto' }}
                   />
                 </Box>
-              </Grid>
+              </Box>
 
-            </Grid>
+            </Box>
           </Container>
         </Box>
       </MainLayout>

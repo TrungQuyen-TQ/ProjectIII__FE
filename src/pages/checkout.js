@@ -89,19 +89,19 @@ export default function CheckoutPage() {
             const foundProv = provinces.find(p => p.name === user.address.province);
             if (foundProv) {
                 setSelectedProvinceCode(foundProv.code);
-                
+
                 // Nạp Quận/Huyện của Tỉnh này
                 fetch(`https://provinces.open-api.vn/api/p/${foundProv.code}?depth=2`)
                     .then(res => res.json())
                     .then(data => {
                         const distList = data.districts || [];
                         setDistricts(distList);
-                        
+
                         if (user.address.district) {
                             const foundDist = distList.find(d => d.name === user.address.district);
                             if (foundDist) {
                                 setSelectedDistrictCode(foundDist.code);
-                                
+
                                 // Nạp Phường/Xã của Huyện này
                                 fetch(`https://provinces.open-api.vn/api/d/${foundDist.code}?depth=2`)
                                     .then(res => res.json())
@@ -121,7 +121,7 @@ export default function CheckoutPage() {
     const handleProvinceChange = (e) => {
         const provinceCode = e.target.value;
         setSelectedProvinceCode(provinceCode);
-        
+
         const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
         setFormData(prev => ({
             ...prev,
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
             district: '',
             ward: ''
         }));
-        
+
         setSelectedDistrictCode('');
         setWards([]);
         setDistricts([]);
@@ -176,6 +176,17 @@ export default function CheckoutPage() {
 
     const handleSubmitOrder = (e) => {
         e.preventDefault();
+        console.log("=== THÔNG TIN CHECKOUT ===");
+        console.log("Form Data (Họ tên, Email, SĐT, Địa chỉ):", formData);
+        console.log("Phương thức thanh toán:", paymentMethod);
+        console.log("Danh sách sản phẩm:", dummyCartItems);
+        console.log("Chi tiết thanh toán:", {
+            subTotal,
+            shippingFee,
+            taxes,
+            grandTotal
+        });
+        console.log("==========================");
         setOrderSuccess(true);
     };
 
@@ -189,21 +200,21 @@ export default function CheckoutPage() {
             <Head>
                 <title>Thanh toán đơn hàng | Arts</title>
             </Head>
-            
+
             <Box sx={{ bgcolor: COLORS.bgLight, minHeight: '100vh', py: { xs: 4, md: 6 } }}>
                 <Container maxWidth="xl">
-                    
+
                     <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Thanh toán đơn hàng
                     </Typography>
 
                     <form onSubmit={handleSubmitOrder}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'flex-start' }}>
-                            
+
                             {/* CỘT BÊN TRÁI: THÔNG TIN GIAO NHẬN & PHƯƠNG THỨC THANH TOÁN */}
                             <Box sx={{ width: { xs: '100%', md: '60%' }, display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                                
-                                <ShippingInfo 
+
+                                <ShippingInfo
                                     formData={formData}
                                     handleInputChange={handleInputChange}
                                     provinces={provinces}
@@ -216,7 +227,7 @@ export default function CheckoutPage() {
                                     handleWardChange={handleWardChange}
                                 />
 
-                                <PaymentMethod 
+                                <PaymentMethod
                                     paymentMethod={paymentMethod}
                                     setPaymentMethod={setPaymentMethod}
                                 />
@@ -224,7 +235,7 @@ export default function CheckoutPage() {
 
                             {/* CỘT BÊN PHẢI: TÓM TẮT ĐƠN HÀNG */}
                             <Box sx={{ flexGrow: 1, width: '100%', position: 'sticky', top: 90 }}>
-                                <OrderSummary 
+                                <OrderSummary
                                     cartItems={dummyCartItems}
                                     subTotal={subTotal}
                                     shippingFee={shippingFee}
@@ -240,8 +251,8 @@ export default function CheckoutPage() {
             </Box>
 
             {/* DIALOG ĐẶT HÀNG THÀNH CÔNG */}
-            <Dialog 
-                open={orderSuccess} 
+            <Dialog
+                open={orderSuccess}
                 onClose={handleCloseSuccess}
                 PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
             >
@@ -251,8 +262,8 @@ export default function CheckoutPage() {
                     <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
                         Cảm ơn bạn đã lựa chọn mua sắm tại <strong>Arts</strong>. Đơn hàng của bạn đã được ghi nhận thành công và đang được xử lý giao hàng.
                     </DialogContentText>
-                    <Button 
-                        onClick={handleCloseSuccess} 
+                    <Button
+                        onClick={handleCloseSuccess}
                         variant="contained"
                         fullWidth
                         sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}

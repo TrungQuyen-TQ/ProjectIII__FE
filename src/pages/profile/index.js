@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/router';
 import { logoutUser, updateUserAddress } from '../../redux/slices/authSlice';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 // Icons
 import PersonIcon from '@mui/icons-material/Person';
@@ -93,10 +94,82 @@ export default function ProfilePage() {
     }, [user]);
 
     const handleLogout = () => {
-        if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-            dispatch(logoutUser());
-            router.push('/');
-        }
+        toast((t) => (
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, p: 0.5, minWidth: 280 }}>
+                <Box sx={{ 
+                    bgcolor: 'rgba(239, 68, 68, 0.1)', 
+                    color: '#ef4444', 
+                    borderRadius: '50%', 
+                    p: 1, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    flexShrink: 0
+                }}>
+                    <ExitToAppIcon sx={{ fontSize: 20 }} />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5, lineHeight: 1.2 }}>
+                            Xác nhận đăng xuất
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                            Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button 
+                            size="small" 
+                            variant="text" 
+                            onClick={() => toast.dismiss(t.id)}
+                            sx={{ 
+                                textTransform: 'none', 
+                                fontWeight: 600, 
+                                color: '#64748b',
+                                borderRadius: '8px',
+                                px: 2,
+                                '&:hover': { bgcolor: '#f1f5f9' }
+                            }}
+                        >
+                            Hủy
+                        </Button>
+                        <Button 
+                            size="small" 
+                            variant="contained" 
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                dispatch(logoutUser());
+                                router.push('/');
+                                toast.success("Đăng xuất thành công!");
+                            }}
+                            sx={{ 
+                                textTransform: 'none', 
+                                borderRadius: '8px', 
+                                px: 2.5, 
+                                bgcolor: '#ef4444',
+                                fontWeight: 600,
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' } 
+                            }}
+                        >
+                            Đăng xuất
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
+        ), {
+            duration: 6000,
+            position: 'top-center',
+            style: {
+                borderRadius: '16px',
+                background: '#ffffff',
+                color: '#1e293b',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                padding: '16px',
+                border: '1px solid #f1f5f9',
+                maxWidth: '380px'
+            }
+        });
     };
 
     // Thay đổi tỉnh ở Sổ địa chỉ
@@ -153,12 +226,12 @@ export default function ProfilePage() {
 
     const handleSaveAddress = () => {
         if (!addressForm.province || !addressForm.district || !addressForm.ward || !addressForm.streetAddress) {
-            alert("Vui lòng điền đầy đủ các trường thông tin địa chỉ!");
+            toast.error("Vui lòng điền đầy đủ các trường thông tin địa chỉ!");
             return;
         }
         
         dispatch(updateUserAddress(addressForm));
-        alert("Đã cập nhật sổ địa chỉ thành công! Khi thanh toán đơn hàng, địa chỉ này sẽ được tự động điền sẵn.");
+        toast.success("Đã cập nhật sổ địa chỉ thành công! Khi thanh toán đơn hàng, địa chỉ này sẽ được tự động điền sẵn.");
     };
 
     // Lấy chữ cái đầu (Ví dụ: Ngô Đức Huy -> NĐ)

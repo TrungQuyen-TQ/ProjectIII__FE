@@ -19,6 +19,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/router';
 import { loginUser } from '../../redux/slices/authSlice';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -39,6 +40,7 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     if (!email || !password) {
+      toast.error('Vui lòng nhập đầy đủ Email và Mật khẩu.');
       setErrorMsg('Vui lòng nhập đầy đủ Email và Mật khẩu.');
       return;
     }
@@ -49,15 +51,19 @@ export default function LoginPage() {
       const actionResult = await dispatch(loginUser({ Email: email, Password: password }));
       console.log('login.js: loginUser result:', actionResult);
       if (loginUser.fulfilled.match(actionResult)) {
+        toast.success('Đăng nhập thành công!');
         setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
         setTimeout(() => {
           router.push('/');
         }, 1500);
       } else {
-        setErrorMsg(actionResult.payload || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+        const errorText = actionResult.payload || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+        toast.error(errorText);
+        setErrorMsg(errorText);
       }
     } catch (err) {
       console.error('login.js: Exception in handleSubmit:', err);
+      toast.error('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
       setErrorMsg('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
@@ -72,11 +78,11 @@ export default function LoginPage() {
 
       <MainLayout>
         {/* ĐỔI LỚN NHẤT TẠI ĐÂY: Dùng py thay vì my, thêm flexGrow: 1 */}
-        <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center', justifyContent: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 }, width: '100%' }}>
-          <Container maxWidth="xl" sx={{ width: '100%' }}>
-            <Grid container spacing={4} alignItems="center" justifyContent="center">
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#ffffff', py: { xs: 6, md: 10 } }}>
+          <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
 
-              <Grid item xs={12} lg={6} sx={{ display: { xs: 'none', lg: 'flex' }, justifyContent: 'center' }}>
+              <Box sx={{ width: { xs: '100%', md: '50%' }, display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
                 <Box sx={{ bgcolor: '#f7f9fc', borderRadius: '32px', p: 8, width: '100%', textAlign: 'center' }}>
                   <Box
                     component="img"
@@ -85,9 +91,9 @@ export default function LoginPage() {
                     sx={{ width: '100%', maxWidth: 400, height: 'auto' }}
                   />
                 </Box>
-              </Grid>
+              </Box>
 
-              <Grid item xs={12} lg={6} sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ width: { xs: '100%', md: '50%' }, display: 'flex', justifyContent: 'center' }}>
                 <Box sx={{ width: '100%', maxWidth: 450, mx: 'auto' }}>
                   <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 1.5 }}>
                     ĐĂNG NHẬP
@@ -166,8 +172,8 @@ export default function LoginPage() {
                     </Box>
                   </Box>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Container>
         </Box>
       </MainLayout>
