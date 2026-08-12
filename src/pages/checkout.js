@@ -81,16 +81,29 @@ export default function CheckoutPage() {
     const taxes = Math.round((subTotal - discountAmount) * 0.08);
     const grandTotal = Math.max(0, subTotal + shippingFee + taxes - discountAmount);
 
-    // 1. Tải danh sách Tỉnh/Thành phố khi load trang
+    const [mounted, setMounted] = useState(false);
+
+    // 1. Tải danh sách Tỉnh/Thành phố khi load trang và set mounted
     useEffect(() => {
+        setMounted(true);
         fetch('https://provinces.open-api.vn/api/p/')
             .then(res => res.json())
             .then(data => setProvinces(data))
             .catch(err => console.error("Lỗi tải tỉnh thành:", err));
     }, []);
 
-    // 2. Tải phương thức thanh toán và phương thức vận chuyển từ API
+    // Bảo vệ trang: Chuyển hướng đăng nhập nếu chưa có user
     useEffect(() => {
+        if (mounted && !user) {
+            toast.error("Vui lòng đăng nhập để thanh toán!");
+            router.push('/auth/login?redirect=/checkout');
+        }
+    }, [mounted, user, router]);
+
+    // 2. Tải phương thức thanh toán và phương thức vận chuyển từ API (Chỉ gọi khi user đã sẵn sàng)
+    useEffect(() => {
+        if (!user) return;
+
         const loadMethods = async () => {
             try {
                 const payData = await paymentMethodService.getAllPaymentMethods();
@@ -109,7 +122,7 @@ export default function CheckoutPage() {
             }
         };
         loadMethods();
-    }, []);
+    }, [user]);
 
     // 1b. Tự động nhận diện và nạp các danh sách Quận/Phường tương ứng nếu người dùng đã có địa chỉ mặc định đã lưu
     useEffect(() => {

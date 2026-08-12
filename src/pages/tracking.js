@@ -1,206 +1,238 @@
 // src/pages/tracking.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import {
-    Box, Container, Typography, TextField, Button, Grid,
-    Paper, Stepper, Step, StepLabel, Divider, Stack
-} from '@mui/material';
-
-// --- ICONS ---
-import SearchIcon from '@mui/icons-material/Search';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useSelector } from 'react-redux';
+import { useRouter } from 'next/router';
+import { Box, Container, Typography, Button, CircularProgress, Paper } from '@mui/material';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 
 import MainLayout from '../layouts/MainLayout';
+import toast from 'react-hot-toast';
+import orderService from '../services/orderService';
+import OrderListSection from '../sections/tracking/OrderListSection';
+import OrderDetailSection from '../sections/tracking/OrderDetailSection';
 
 const COLORS = {
-    primary: '#17479d',
-    accent: '#ff910d',
-    bg: '#f5f7fa',
-    text: '#333'
+    primaryBlue: '#17479d',
+    activeOrange: '#ff910d',
+    bgLight: '#e5f2fb',
+    borderGray: '#e0eaf5',
+    textMuted: '#666',
+    success: '#2e7d32',
+    error: '#d32f2f',
+    warning: '#ed6c02',
+    info: '#0288d1'
 };
 
-// Các bước giao hàng
 const trackingSteps = [
-    'Đã đặt hàng',
+    'Chờ xác nhận',
     'Đã xác nhận',
     'Đang giao hàng',
     'Giao thành công'
 ];
 
 export default function TrackingPage() {
-    const [orderId, setOrderId] = useState('');
-    const [phone, setPhone] = useState('');
-    const [isTracking, setIsTracking] = useState(false); // State để hiển thị kết quả demo
+    const router = useRouter();
+    const { user } = useSelector((state) => state.auth);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
+    const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
-    const handleTrackOrder = (e) => {
-        e.preventDefault();
-        if (orderId && phone) {
-            // Giả lập gọi API và trả về kết quả sau khi bấm nút
-            setIsTracking(true);
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchOrders = async () => {
+            try {
+                const data = await orderService.getMyOrders();
+                console.log("MY ORDERS API RESPONSE:", data);
+                const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
+                
+                const sortedOrders = fetchedOrders.sort((a, b) => {
+                    const dateA = new Date(a.createdAt || a.CreatedAt || 0);
+                    const dateB = new Date(b.createdAt || b.CreatedAt || 0);
+                    return dateB - dateA;
+                });
+                
+                setOrders(sortedOrders);
+                if (sortedOrders.length > 0) {
+                    setSelectedOrderId(sortedOrders[0].id || sortedOrders[0].Id);
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải đơn hàng của tôi:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchOrders();
+    }, [user]);
+
+    useEffect(() => {
+        if (!selectedOrderId) {
+            setSelectedOrderDetails(null);
+            return;
+        }
+
+        const fetchOrderDetails = async () => {
+            setLoadingDetails(true);
+            try {
+                const data = await orderService.getOrderById(selectedOrderId);
+                console.log("ORDER DETAILS API RESPONSE:", data);
+                setSelectedOrderDetails(data);
+            } catch (err) {
+                console.error("Lỗi khi tải chi tiết đơn hàng:", err);
+            } finally {
+                setLoadingDetails(false);
+            }
+        };
+
+        fetchOrderDetails();
+    }, [selectedOrderId]);
+
+    const handleCancelOrder = async () => {
+        if (!selectedOrderId) return;
+        if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
+
+        try {
+            const loadingToast = toast.loading("Đang tiến hành hủy đơn hàng...");
+            await orderService.cancelOrder(selectedOrderId);
+            toast.dismiss(loadingToast);
+            toast.success("Hủy đơn hàng thành công!");
+
+            // Reload order list
+            const data = await orderService.getMyOrders();
+            const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
+            const sortedOrders = fetchedOrders.sort((a, b) => {
+                const dateA = new Date(a.createdAt || a.CreatedAt || 0);
+                const dateB = new Date(b.createdAt || b.CreatedAt || 0);
+                return dateB - dateA;
+            });
+            setOrders(sortedOrders);
+
+            // Reload current details
+            const detailData = await orderService.getOrderById(selectedOrderId);
+            setSelectedOrderDetails(detailData);
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || "Hủy đơn hàng thất bại. Vui lòng thử lại!");
         }
     };
+
+    const getStatusLabel = (order) => {
+        if (!order) return { label: 'Không xác định', color: COLORS.textMuted, stepIndex: -1 };
+        const status = order.orderStatus;
+        const label = order.orderStatusName || 'Không xác định';
+        
+        switch (status) {
+            case 0:
+                return { label: label, color: COLORS.warning, stepIndex: 0 };
+            case 1:
+                return { label: label, color: COLORS.info, stepIndex: 1 };
+            case 2:
+                return { label: label, color: COLORS.activeOrange, stepIndex: 2 };
+            case 3:
+                return { label: label, color: COLORS.success, stepIndex: 3 };
+            case 4:
+                return { label: label, color: COLORS.error, stepIndex: -1 };
+            default:
+                return { label: label, color: COLORS.textMuted, stepIndex: -1 };
+        }
+    };
+
+    if (loading) {
+        return (
+            <MainLayout>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', bgcolor: COLORS.bgLight }}>
+                    <CircularProgress />
+                </Box>
+            </MainLayout>
+        );
+    }
 
     return (
         <>
             <Head>
-                <title>Theo dõi đơn hàng | Tạp Hóa Store</title>
+                <title>Theo dõi đơn hàng | Arts</title>
             </Head>
 
             <MainLayout>
-                <Box sx={{ bgcolor: COLORS.bg, minHeight: '100vh', py: 8 }}>
-                    <Container maxWidth="md">
-
-                        {/* TIÊU ĐỀ TRANG */}
-                        <Box sx={{ textAlign: 'center', mb: 5 }}>
-                            <LocalShippingIcon sx={{ fontSize: 60, color: COLORS.primary, mb: 1 }} />
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: COLORS.primary, mb: 1 }}>
-                                Theo Dõi Đơn Hàng
-                            </Typography>
-                            <Typography variant="body1" color="text.secondary">
-                                Nhập mã đơn hàng và số điện thoại của bạn để kiểm tra trạng thái vận chuyển
-                            </Typography>
-                        </Box>
-
-                        {/* FORM TRA CỨU */}
-                        <Paper elevation={0} sx={{ p: 4, borderRadius: '12px', border: '1px solid #e0e0e0', mb: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                            <form onSubmit={handleTrackOrder}>
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} sm={5}>
-                                        <TextField
-                                            fullWidth
-                                            label="Mã đơn hàng"
-                                            variant="outlined"
-                                            placeholder="VD: THS-123456"
-                                            value={orderId}
-                                            onChange={(e) => setOrderId(e.target.value)}
-                                            required
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={5}>
-                                        <TextField
-                                            fullWidth
-                                            label="Số điện thoại"
-                                            variant="outlined"
-                                            placeholder="Nhập SĐT đặt hàng"
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            required
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={2} sx={{ display: 'flex', alignItems: 'stretch' }}>
-                                        <Button
-                                            type="submit"
-                                            fullWidth
-                                            variant="contained"
-                                            sx={{ bgcolor: COLORS.primary, '&:hover': { bgcolor: '#0f3170' }, boxShadow: 'none' }}
-                                        >
-                                            <SearchIcon />
-                                        </Button>
-                                    </Grid>
-                                </Grid>
-                            </form>
-                        </Paper>
-
-                        {/* KẾT QUẢ TRA CỨU (Chỉ hiển thị khi đã bấm nút tìm kiếm) */}
-                        {isTracking && (
-                            <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: '12px', border: '1px solid #e0e0e0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', animation: 'fadeIn 0.5s ease-in' }}>
-
-                                {/* Thông tin đơn hàng cơ bản */}
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', mb: 4, gap: 2 }}>
-                                    <Box>
-                                        <Typography variant="h6" sx={{ fontWeight: 700, color: COLORS.text }}>
-                                            Mã đơn hàng: <span style={{ color: COLORS.primary }}>#{orderId || 'THS-9876543'}</span>
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Ngày đặt: 31/07/2026 - 14:30
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
-                                        <Typography variant="subtitle2" sx={{ color: COLORS.text, fontWeight: 600 }}>
-                                            Đơn vị vận chuyển
-                                        </Typography>
-                                        <Typography variant="body1" sx={{ color: COLORS.accent, fontWeight: 700 }}>
-                                            Giao Hàng Nhanh (GHN)
-                                        </Typography>
-                                    </Box>
-                                </Box>
-
-                                <Divider sx={{ mb: 5 }} />
-
-                                {/* THANH TIẾN TRÌNH TRẠNG THÁI (STEPPER) */}
-                                <Box sx={{ width: '100%', mb: 6 }}>
-                                    {/* activeStep = 2 tương đương với trạng thái "Đang giao hàng" */}
-                                    <Stepper activeStep={2} alternativeLabel>
-                                        {trackingSteps.map((label, index) => (
-                                            <Step key={label}>
-                                                <StepLabel
-                                                    StepIconProps={{
-                                                        sx: {
-                                                            color: index <= 2 ? COLORS.accent : '#e0e0e0', // Đổi màu step đã hoàn thành
-                                                            '&.Mui-active': { color: COLORS.accent },
-                                                            '&.Mui-completed': { color: COLORS.accent }
-                                                        }
-                                                    }}
-                                                >
-                                                    <Typography sx={{ fontWeight: index === 2 ? 700 : 500, color: index <= 2 ? COLORS.text : '#999', mt: 1 }}>
-                                                        {label}
-                                                    </Typography>
-                                                </StepLabel>
-                                            </Step>
-                                        ))}
-                                    </Stepper>
-                                </Box>
-
-                                {/* CHI TIẾT LỊCH SỬ GIAO HÀNG */}
-                                <Grid container spacing={4}>
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ bgcolor: '#f9fafc', p: 3, borderRadius: '8px', height: '100%' }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center' }}>
-                                                <ReceiptLongIcon sx={{ mr: 1, color: COLORS.primary }} /> Thông tin người nhận
-                                            </Typography>
-                                            <Stack spacing={1.5}>
-                                                <Typography variant="body2"><strong>Họ tên:</strong> Nguyễn Văn A</Typography>
-                                                <Typography variant="body2"><strong>Số điện thoại:</strong> {phone || '0987 654 321'}</Typography>
-                                                <Typography variant="body2"><strong>Địa chỉ:</strong> 123 Đường Cầu Giấy, Phường Quan Hoa, Quận Cầu Giấy, TP. Hà Nội</Typography>
-                                                <Typography variant="body2"><strong>Ghi chú:</strong> Giao hàng giờ hành chính</Typography>
-                                            </Stack>
-                                        </Box>
-                                    </Grid>
-
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ bgcolor: '#f9fafc', p: 3, borderRadius: '8px', height: '100%' }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center' }}>
-                                                <LocalShippingIcon sx={{ mr: 1, color: COLORS.primary }} /> Lịch sử cập nhật
-                                            </Typography>
-
-                                            {/* Trục thời gian đơn giản */}
-                                            <Stack spacing={2} sx={{ position: 'relative', borderLeft: '2px solid #e0e0e0', ml: 1, pl: 3 }}>
-
-                                                <Box sx={{ position: 'relative' }}>
-                                                    <CheckCircleIcon sx={{ position: 'absolute', left: -35, top: -2, color: COLORS.accent, bgcolor: 'white', borderRadius: '50%' }} />
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.accent }}>Đang giao hàng</Typography>
-                                                    <Typography variant="caption" color="text.secondary">01/08/2026 - 08:15 | Đơn hàng đang được shipper giao đến bạn.</Typography>
-                                                </Box>
-
-                                                <Box sx={{ position: 'relative' }}>
-                                                    <CheckCircleIcon sx={{ position: 'absolute', left: -35, top: -2, color: COLORS.primary, bgcolor: 'white', borderRadius: '50%' }} />
-                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Đã xác nhận</Typography>
-                                                    <Typography variant="caption" color="text.secondary">31/07/2026 - 15:00 | Đơn hàng đã được đóng gói và bàn giao cho ĐVVC.</Typography>
-                                                </Box>
-
-                                                <Box sx={{ position: 'relative' }}>
-                                                    <CheckCircleIcon sx={{ position: 'absolute', left: -35, top: -2, color: COLORS.primary, bgcolor: 'white', borderRadius: '50%' }} />
-                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Đặt hàng thành công</Typography>
-                                                    <Typography variant="caption" color="text.secondary">31/07/2026 - 14:30 | Hệ thống đã ghi nhận đơn hàng.</Typography>
-                                                </Box>
-
-                                            </Stack>
-                                        </Box>
-                                    </Grid>
-                                </Grid>
+                <Box sx={{ bgcolor: COLORS.bgLight, minHeight: '100vh', py: { xs: 4, md: 6 } }}>
+                    <Container maxWidth="lg">
+                        
+                        {/* CHƯA ĐĂNG NHẬP */}
+                        {!user ? (
+                            <Paper elevation={0} sx={{ p: 5, textCenter: 'center', borderRadius: '16px', border: '1px solid #e0eaf5', textAlign: 'center', maxWidth: 600, mx: 'auto' }}>
+                                <ShoppingBagIcon sx={{ fontSize: 60, color: '#ccc', mb: 2 }} />
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                                    Bạn chưa đăng nhập
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                    Vui lòng đăng nhập tài khoản của bạn để truy cập danh sách và theo dõi hành trình đơn hàng.
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    onClick={() => router.push('/auth/login')}
+                                    sx={{ bgcolor: COLORS.primaryBlue, px: 4, borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
+                                >
+                                    Đăng nhập ngay
+                                </Button>
                             </Paper>
+                        ) : orders.length === 0 ? (
+                            /* KHÔNG CÓ ĐƠN HÀNG */
+                            <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: '16px', border: '1px solid #e0eaf5', maxWidth: 600, mx: 'auto' }}>
+                                <ShoppingBagIcon sx={{ fontSize: 80, color: '#ccc', mb: 2 }} />
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                                    Bạn chưa có đơn hàng nào
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                    Hãy tham khảo các mặt hàng đặc biệt của chúng tôi và đặt đơn hàng đầu tiên!
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    onClick={() => router.push('/')}
+                                    sx={{ bgcolor: COLORS.primaryBlue, px: 4, borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
+                                >
+                                    Mua sắm ngay
+                                </Button>
+                            </Paper>
+                        ) : (
+                            <Box>
+                                <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', width: '100%' }}>
+                                    
+                                    {/* CỘT TRÁI - DANH SÁCH ĐƠN HÀNG */}
+                                    <OrderListSection
+                                        orders={orders}
+                                        selectedOrderId={selectedOrderId}
+                                        setSelectedOrderId={setSelectedOrderId}
+                                        COLORS={COLORS}
+                                        getStatusLabel={getStatusLabel}
+                                    />
+
+                                    {/* CỘT PHẢI - CHI TIẾT HÀNH TRÌNH ĐƠN HÀNG */}
+                                    <OrderDetailSection
+                                        selectedOrder={selectedOrderDetails}
+                                        loadingDetails={loadingDetails}
+                                        COLORS={COLORS}
+                                        getStatusLabel={getStatusLabel}
+                                        trackingSteps={trackingSteps}
+                                        onCancelOrder={handleCancelOrder}
+                                    />
+                                </Box>
+
+                                {/* DEBUG BOX HỒ SƠ TRẢ VỀ CỦA API */}
+                                <Box sx={{ mt: 4, p: 3, bgcolor: '#ffffff', borderRadius: '16px', border: '1px solid #e0eaf5', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 2 }}>
+                                        🔧 DỮ LIỆU THỰC TẾ API TRẢ VỀ (DEBUG)
+                                    </Typography>
+                                    <Box component="pre" sx={{ m: 0, p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #eef2f6', overflowX: 'auto', fontSize: '12px', fontFamily: 'monospace' }}>
+                                        {JSON.stringify({ orders, selectedOrderDetails }, null, 2)}
+                                    </Box>
+                                </Box>
+                            </Box>
                         )}
 
                     </Container>

@@ -56,7 +56,7 @@ export default function CartPage() {
   // --- TÍNH TOÁN ORDER SUMMARY ---
   const totalItems = cartItems.reduce((sum, item) => sum + item.qty, 0);
   const subTotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const shippingFee = subTotal > 0 ? 30000 : 0; // Phí ship giả định 30k (nếu giỏ hàng trống thì = 0)
+  const shippingFee = 0;
   const taxes = 0; // Thuế giả định = 0
   const grandTotal = subTotal + shippingFee + taxes;
 

@@ -61,56 +61,52 @@ export default function ProductInfo({
   };
 
   useEffect(() => {
-    if (hasObjectVariants) {
-      const firstVariant = product.variants[0];
-      setSelectedVariant(firstVariant);
-      if (firstVariant.attributes) {
-        setSelectedAttributes(firstVariant.attributes);
-      }
-    } else if (product && Array.isArray(product.variants) && product.variants.length > 0 && typeof product.variants[0] === 'string') {
-      setSelectedStringVariant(product.variants[0]);
-    } else {
-      setSelectedVariant(null);
-      setSelectedAttributes({});
-      setSelectedStringVariant('');
-    }
+    setSelectedVariant(null);
+    setSelectedAttributes({});
+    setSelectedStringVariant('');
   }, [product]);
 
-  const handleSelectAttribute = (key, value) => {
-    const newAttrs = { ...selectedAttributes, [key]: value };
-    setSelectedAttributes(newAttrs);
-
-    const matched = product.variants.find(v => {
-      return v && v.attributes && Object.entries(newAttrs).every(([k, val]) => String(v.attributes[k]) === String(val));
-    });
-    if (matched) {
-      setSelectedVariant(matched);
-      const img = matched.thumbnail || (matched.images && matched.images[0]);
+  const handleSelectVariant = (v) => {
+    setSelectedVariant(v);
+    if (v) {
+      if (v.attributes) {
+        setSelectedAttributes(v.attributes);
+      }
+      const img = v.thumbnail || (v.images && v.images[0]);
       if (img) {
         setActiveThumb(img);
       }
+    } else {
+      setSelectedAttributes({});
+      setActiveThumb(product.image || product.thumbnail || '');
     }
   };
 
   const handleSelectStringVariant = (val, idx) => {
     setSelectedStringVariant(val);
-    if (Array.isArray(product.thumbnails) && product.thumbnails[idx]) {
-      setActiveThumb(product.thumbnails[idx]);
-    } else if (Array.isArray(product.images) && product.images[idx]) {
-      setActiveThumb(product.images[idx]);
+    if (val === '') {
+      setActiveThumb(product.image || product.thumbnail || '');
+    } else {
+      if (Array.isArray(product.thumbnails) && product.thumbnails[idx]) {
+        setActiveThumb(product.thumbnails[idx]);
+      } else if (Array.isArray(product.images) && product.images[idx]) {
+        setActiveThumb(product.images[idx]);
+      }
     }
   };
 
   const getSelectedVariantText = () => {
     if (hasObjectVariants && selectedVariant) {
-      return Object.entries(selectedAttributes)
-        .map(([k, v]) => `${k}: ${v}`)
+      return Object.entries(selectedVariant.attributes || {})
+        .map(([k, v]) => {
+          const label = k === 'design' ? 'Phân loại' : k;
+          return `${label}: ${v}`;
+        })
         .join(', ');
     }
     if (product && Array.isArray(product.variants) && product.variants.length > 0 && typeof product.variants[0] === 'string') {
       return selectedStringVariant;
     }
-    return '';
   };
 
   const handleAddToCart = () => {
@@ -120,8 +116,8 @@ export default function ProductInfo({
       price: hasObjectVariants && selectedVariant ? selectedVariant.price : product.price,
       sku: hasObjectVariants && selectedVariant ? selectedVariant.sku : product.sku,
       productVariantId: hasObjectVariants && selectedVariant ? selectedVariant.id : null,
-      image: hasObjectVariants && selectedVariant && (selectedVariant.thumbnail || (selectedVariant.images && selectedVariant.images[0])) 
-        ? (selectedVariant.thumbnail || selectedVariant.images[0]) 
+      image: hasObjectVariants && selectedVariant && (selectedVariant.thumbnail || (selectedVariant.images && selectedVariant.images[0]))
+        ? (selectedVariant.thumbnail || selectedVariant.images[0])
         : (product.image || product.thumbnail)
     };
     dispatch(addToCart({ product: productToCart, quantity: qty, variant: variantText }));
@@ -135,8 +131,8 @@ export default function ProductInfo({
       price: hasObjectVariants && selectedVariant ? selectedVariant.price : product.price,
       sku: hasObjectVariants && selectedVariant ? selectedVariant.sku : product.sku,
       productVariantId: hasObjectVariants && selectedVariant ? selectedVariant.id : null,
-      image: hasObjectVariants && selectedVariant && (selectedVariant.thumbnail || (selectedVariant.images && selectedVariant.images[0])) 
-        ? (selectedVariant.thumbnail || selectedVariant.images[0]) 
+      image: hasObjectVariants && selectedVariant && (selectedVariant.thumbnail || (selectedVariant.images && selectedVariant.images[0]))
+        ? (selectedVariant.thumbnail || selectedVariant.images[0])
         : (product.image || product.thumbnail)
     };
     dispatch(addToCart({ product: productToCart, quantity: qty, variant: variantText }));
@@ -144,7 +140,7 @@ export default function ProductInfo({
   };
 
   const displayImage = getProductImageUrl(activeThumb || product.image || product.thumbnail);
-  
+
   const displayPrice = hasObjectVariants && selectedVariant
     ? `${selectedVariant.price.toLocaleString('vi-VN')}đ`
     : (typeof product.price === 'number' ? `${product.price.toLocaleString('vi-VN')}đ` : product.price);
@@ -245,18 +241,40 @@ export default function ProductInfo({
           </Box>
 
           {/* LỰA CHỌN BIẾN THỂ (CHO API BACKEND) */}
-          {hasObjectVariants && attributeKeys.map(key => (
-            <Box key={key} sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{key}:</Typography>
+          {hasObjectVariants && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Phân loại:</Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-                {getAttributeValues(key).map(val => {
-                  const isSelected = String(selectedAttributes[key]) === String(val);
+                <Button
+                  variant={selectedVariant === null ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => handleSelectVariant(null)}
+                  sx={{
+                    borderRadius: '6px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 2,
+                    py: 0.5,
+                    borderColor: selectedVariant === null ? '#2962ff' : '#e0e0e0',
+                    bgcolor: selectedVariant === null ? '#2962ff' : 'white',
+                    color: selectedVariant === null ? 'white' : '#555',
+                    '&:hover': {
+                      borderColor: '#2962ff',
+                      bgcolor: selectedVariant === null ? '#1c4cc7' : 'rgba(41, 98, 255, 0.04)'
+                    }
+                  }}
+                >
+                  Sản phẩm gốc
+                </Button>
+                {product.variants.map((v) => {
+                  const isSelected = selectedVariant && selectedVariant.id === v.id;
+                  const label = v.name || Object.values(v.attributes || {}).join(' - ') || 'Biến thể';
                   return (
                     <Button
-                      key={val}
+                      key={v.id}
                       variant={isSelected ? "contained" : "outlined"}
                       size="small"
-                      onClick={() => handleSelectAttribute(key, val)}
+                      onClick={() => handleSelectVariant(v)}
                       sx={{
                         borderRadius: '6px',
                         textTransform: 'none',
@@ -272,19 +290,40 @@ export default function ProductInfo({
                         }
                       }}
                     >
-                      {val}
+                      {label}
                     </Button>
                   );
                 })}
               </Stack>
             </Box>
-          ))}
+          )}
 
           {/* LỰA CHỌN BIẾN THỂ (DÀNH CHO MOCK DATA) */}
           {!hasObjectVariants && product && Array.isArray(product.variants) && product.variants.length > 0 && typeof product.variants[0] === 'string' && (
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Biến thể sản phẩm:</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Phân loại:</Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                <Button
+                  variant={selectedStringVariant === '' ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => handleSelectStringVariant('', -1)}
+                  sx={{
+                    borderRadius: '6px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 2,
+                    py: 0.5,
+                    borderColor: selectedStringVariant === '' ? '#2962ff' : '#e0e0e0',
+                    bgcolor: selectedStringVariant === '' ? '#2962ff' : 'white',
+                    color: selectedStringVariant === '' ? 'white' : '#555',
+                    '&:hover': {
+                      borderColor: '#2962ff',
+                      bgcolor: selectedStringVariant === '' ? '#1c4cc7' : 'rgba(41, 98, 255, 0.04)'
+                    }
+                  }}
+                >
+                  Sản phẩm gốc
+                </Button>
                 {product.variants.map((val, idx) => {
                   const isSelected = selectedStringVariant === val;
                   return (

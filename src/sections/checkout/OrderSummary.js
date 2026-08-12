@@ -116,7 +116,7 @@ export default function OrderSummary({
                 </Box>
                 {discountAmount > 0 && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>Giảm giá (Coupon)</Typography>
+                        <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>Giảm giá </Typography>
                         <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>-{formatPrice(discountAmount)}</Typography>
                     </Box>
                 )}
@@ -124,10 +124,7 @@ export default function OrderSummary({
                     <Typography variant="body2" color="text.secondary">Phí vận chuyển</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatPrice(shippingFee)}</Typography>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Thuế (VAT 8%)</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatPrice(taxes)}</Typography>
-                </Box>
+
                 <Divider />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Tổng tiền thanh toán</Typography>

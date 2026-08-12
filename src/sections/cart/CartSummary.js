@@ -26,14 +26,6 @@ export default function CartSummary({
           <Typography sx={{ color: '#666', fontSize: '0.95rem' }}>Tạm tính</Typography>
           <Typography sx={{ fontWeight: 500 }}>{formatPrice(subTotal)}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography sx={{ color: '#666', fontSize: '0.95rem' }}>Phí giao hàng</Typography>
-          <Typography sx={{ fontWeight: 500 }}>{formatPrice(shippingFee)}</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography sx={{ color: '#666', fontSize: '0.95rem' }}>Thuế</Typography>
-          <Typography sx={{ fontWeight: 500 }}>{formatPrice(taxes)}</Typography>
-        </Box>
       </Stack>
 
       <Divider sx={{ mb: 2 }} />

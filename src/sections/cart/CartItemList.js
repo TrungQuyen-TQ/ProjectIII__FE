@@ -64,7 +64,7 @@ export default function CartItemList({
                   {item.name}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#9e9e9e' }}>
-                  {item.variant}
+                  {item.variant ? String(item.variant).replace(/design:/gi, 'Phân loại:') : ''}
                 </Typography>
               </Box>
 
