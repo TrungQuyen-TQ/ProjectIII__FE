@@ -1,59 +1,56 @@
 // src/pages/cart.js
-import React, { useState } from 'react';
+import React from 'react';
 import Head from 'next/head';
 import { Box, Container } from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
 
 import MainLayout from '../layouts/MainLayout';
 import CartItemList from '../sections/cart/CartItemList';
 import CartSummary from '../sections/cart/CartSummary';
-
-// Dữ liệu mẫu (Dummy data) - Đã chuyển giá tiền sang dạng SỐ (Number) để tính toán
-const initialCartItems = [
-  {
-    id: 1,
-    name: 'Bút Gel Thiên Long Pokémon GEL-045/PKM – Mực Xanh 0.5mm',
-    variant: 'Eevee',
-    price: 10800,
-    originalPrice: 12000,
-    discount: '-10%',
-    qty: 1,
-    image: 'https://images.unsplash.com/photo-1583485088034-697b5a624f47?w=150&q=80'
-  },
-  {
-    id: 2,
-    name: 'Bút Gel Thiên Long GOAL GEL-052 Quick Dry – 0.5mm',
-    variant: 'Xanh - Cán Xanh',
-    price: 54000,
-    originalPrice: 60000,
-    discount: '-10%',
-    qty: 5,
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150&q=80'
-  }
-];
+import { updateQuantity, removeFromCart, clearCart } from '../redux/slices/cartSlice';
 
 // Hàm hỗ trợ định dạng tiền tệ (VD: 10800 -> "10,800đ")
 const formatPrice = (price) => {
-  return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+  const numericPrice = typeof price === 'number' ? price : parseFloat(price) || 0;
+  return new Intl.NumberFormat('vi-VN').format(numericPrice) + 'đ';
 };
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const dispatch = useDispatch();
+  const reduxItems = useSelector((state) => state.cart.items);
+  const [mounted, setMounted] = React.useState(false);
 
-  // --- CÁC HÀM XỬ LÝ SỰ KIỆN ---
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Mapping quantity -> qty để tương thích với CartItemList & CartSummary
+  const cartItems = mounted ? reduxItems.map(item => ({
+    ...item,
+    qty: item.quantity
+  })) : [];
+
+  // --- CÁC HÀM XỬ LÝ SỰ KIỆN QUA REDUX ---
   const handleIncrease = (id) => {
-    setCartItems(items => items.map(item => item.id === id ? { ...item, qty: item.qty + 1 } : item));
+    const item = cartItems.find(i => i.id === id);
+    if (item) {
+      dispatch(updateQuantity({ id, quantity: item.qty + 1 }));
+    }
   };
 
   const handleDecrease = (id) => {
-    setCartItems(items => items.map(item => item.id === id && item.qty > 1 ? { ...item, qty: item.qty - 1 } : item));
+    const item = cartItems.find(i => i.id === id);
+    if (item && item.qty > 1) {
+      dispatch(updateQuantity({ id, quantity: item.qty - 1 }));
+    }
   };
 
   const handleRemove = (id) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+    dispatch(removeFromCart(id));
   };
 
   const handleClearCart = () => {
-    setCartItems([]);
+    dispatch(clearCart());
   };
 
   // --- TÍNH TOÁN ORDER SUMMARY ---
@@ -105,4 +102,4 @@ export default function CartPage() {
       </MainLayout>
     </>
   );
-}
+}

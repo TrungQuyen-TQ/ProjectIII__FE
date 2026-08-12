@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
-  Box, Container, Typography, Breadcrumbs
+  Box, Container, Typography, Breadcrumbs, CircularProgress
 } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import HomeIcon from '@mui/icons-material/Home';
@@ -17,12 +17,18 @@ import ProductInfo from '../../sections/product/ProductInfo';
 import ProductDescription from '../../sections/product/ProductDescription';
 import ProductRelated from '../../sections/product/ProductRelated';
 
+import productService from '../../services/productService';
+import categoryService from '../../services/categoryService';
+
 export default function ProductDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const [product, setProduct] = useState(null);
   const [activeThumb, setActiveThumb] = useState('');
   const [qty, setQty] = useState(1);
+  const [categoryInfo, setCategoryInfo] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // State phục vụ cho phần Xem nhanh của mục Sản phẩm liên quan
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -30,29 +36,87 @@ export default function ProductDetailPage() {
   const handleCloseQuickView = () => setQuickViewProduct(null);
 
   useEffect(() => {
-    if (id) {
-      const found = dataProducts.find(p => p.id === parseInt(id));
-      if (found) {
-        setProduct(found);
-        setActiveThumb(found.image);
-        setQty(1);
+    if (!id) return;
+
+    const isUuid = (str) => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    };
+
+    const fetchProductData = async () => {
+      setLoading(true);
+      try {
+        let foundProduct = null;
+        if (isUuid(id)) {
+          foundProduct = await productService.getProductById(id);
+        }
+
+        if (!foundProduct) {
+          // Fallback to mock data
+          foundProduct = dataProducts.find(p => p.id === parseInt(id) || String(p.id) === String(id));
+        }
+
+        if (foundProduct) {
+          setProduct(foundProduct);
+          setActiveThumb(foundProduct.image || foundProduct.thumbnail || '');
+          setQty(1);
+
+          // Tải danh mục cha
+          const catId = foundProduct.categoryId || foundProduct.category;
+          let foundCategory = null;
+          const allCategories = await categoryService.getCategories();
+          if (allCategories && allCategories.length > 0) {
+            foundCategory = allCategories.find(c => String(c.id) === String(catId));
+          }
+          if (!foundCategory) {
+            foundCategory = dataCategories.find(c => String(c.id) === String(catId));
+          }
+          setCategoryInfo(foundCategory);
+
+          // Tải sản phẩm liên quan
+          let related = [];
+          if (isUuid(catId)) {
+            const apiRelated = await productService.getProducts({ categoryId: catId });
+            related = (apiRelated || []).filter(p => String(p.id) !== String(foundProduct.id)).slice(0, 4);
+          }
+          if (related.length === 0) {
+            related = dataProducts
+              .filter(p => String(p.category) === String(catId) && String(p.id) !== String(foundProduct.id))
+              .slice(0, 4);
+          }
+          setRelatedProducts(related);
+        } else {
+          setProduct(null);
+        }
+      } catch (err) {
+        console.error("Error loading product detail:", err);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchProductData();
   }, [id]);
 
-  if (!product) {
+  if (loading) {
     return (
       <MainLayout>
         <Box sx={{ py: 10, textAlign: 'center' }}>
-          <Typography variant="h6" color="text.secondary">Đang tải thông tin sản phẩm...</Typography>
+          <CircularProgress />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>Đang tải thông tin sản phẩm...</Typography>
         </Box>
       </MainLayout>
     );
   }
 
-  // Lấy danh mục cha và các sản phẩm liên quan
-  const categoryInfo = dataCategories.find(c => c.id === product.category);
-  const relatedProducts = dataProducts.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+  if (!product) {
+    return (
+      <MainLayout>
+        <Box sx={{ py: 10, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">Không tìm thấy sản phẩm yêu cầu.</Typography>
+        </Box>
+      </MainLayout>
+    );
+  }
 
   return (
     <>
@@ -71,7 +135,7 @@ export default function ProductDetailPage() {
               </Link>
               {categoryInfo && (
                 <Link href={`/category/${categoryInfo.id}`} style={{ color: '#666', textDecoration: 'none' }}>
-                  {categoryInfo.title}
+                  {categoryInfo.title || categoryInfo.name}
                 </Link>
               )}
               <Typography sx={{ color: '#17479d', fontWeight: 600 }}>{product.name}</Typography>

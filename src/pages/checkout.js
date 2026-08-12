@@ -1,16 +1,26 @@
 // src/pages/checkout.js
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { Box, Container, Typography, Dialog, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
-import { useSelector } from 'react-redux';
+import { Box, Container, Typography, Dialog, DialogContent, DialogContentText, DialogTitle, Button, RadioGroup, FormControlLabel, Radio, FormControl, Paper } from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/router';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import HelpIcon from '@mui/icons-material/Help';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import MainLayout from '../layouts/MainLayout';
+import toast from 'react-hot-toast';
 
 // Import các components con từ folder sections
 import ShippingInfo from '../sections/checkout/ShippingInfo';
 import PaymentMethod from '../sections/checkout/PaymentMethod';
 import OrderSummary from '../sections/checkout/OrderSummary';
+
+// Import các services
+import paymentMethodService from '../services/paymentMethodService';
+import deliveryMethodService from '../services/deliveryMethodService';
+import couponService from '../services/couponService';
+import orderService from '../services/orderService';
+import { clearCart } from '../redux/slices/cartSlice';
 
 const COLORS = {
     primaryBlue: '#17479d',
@@ -19,32 +29,15 @@ const COLORS = {
     success: '#2e7d32'
 };
 
-const dummyCartItems = [
-    {
-        id: 1,
-        name: 'Bút Gel Thiên Long Pokémon GEL-045/PKM – Mực Xanh 0.5mm',
-        variant: 'Eevee',
-        price: 10800,
-        qty: 1,
-        image: 'https://images.unsplash.com/photo-1583485088034-697b5a624f47?w=150&q=80'
-    },
-    {
-        id: 2,
-        name: 'Bút Gel Thiên Long GOAL GEL-052 Quick Dry – 0.5mm',
-        variant: 'Xanh - Cán Xanh',
-        price: 54000,
-        qty: 5,
-        image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=150&q=80'
-    }
-];
-
 const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
 };
 
 export default function CheckoutPage() {
     const router = useRouter();
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
+    const { items: cartItems } = useSelector((state) => state.cart);
 
     // Form states - Auto điền thông tin liên hệ và địa chỉ mặc định từ Profile nếu đã lưu
     const [formData, setFormData] = useState({
@@ -66,14 +59,27 @@ export default function CheckoutPage() {
     const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
     const [selectedDistrictCode, setSelectedDistrictCode] = useState('');
 
-    const [paymentMethod, setPaymentMethod] = useState('cod');
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [paymentMethod, setPaymentMethod] = useState('');
+
+    const [deliveryMethods, setDeliveryMethods] = useState([]);
+    const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState('');
+
+    // Coupon states
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponError, setCouponError] = useState('');
+    const [discountAmount, setDiscountAmount] = useState(0);
+
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
 
     // Tính toán số tiền đơn hàng
-    const subTotal = dummyCartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const shippingFee = 30000;
-    const taxes = Math.round(subTotal * 0.08);
-    const grandTotal = subTotal + shippingFee + taxes;
+    const subTotal = cartItems.reduce((sum, item) => sum + item.price * (item.qty || item.quantity || 1), 0);
+    const selectedDelivery = deliveryMethods.find(d => d.id === selectedDeliveryMethod);
+    const shippingFee = selectedDelivery ? (selectedDelivery.shippingFee || selectedDelivery.ShippingFee || 0) : 0;
+    const taxes = Math.round((subTotal - discountAmount) * 0.08);
+    const grandTotal = Math.max(0, subTotal + shippingFee + taxes - discountAmount);
 
     // 1. Tải danh sách Tỉnh/Thành phố khi load trang
     useEffect(() => {
@@ -81,6 +87,28 @@ export default function CheckoutPage() {
             .then(res => res.json())
             .then(data => setProvinces(data))
             .catch(err => console.error("Lỗi tải tỉnh thành:", err));
+    }, []);
+
+    // 2. Tải phương thức thanh toán và phương thức vận chuyển từ API
+    useEffect(() => {
+        const loadMethods = async () => {
+            try {
+                const payData = await paymentMethodService.getAllPaymentMethods();
+                setPaymentMethods(payData || []);
+                if (payData && payData.length > 0) {
+                    setPaymentMethod(payData[0].id);
+                }
+
+                const delData = await deliveryMethodService.getAllDeliveryMethods();
+                setDeliveryMethods(delData || []);
+                if (delData && delData.length > 0) {
+                    setSelectedDeliveryMethod(delData[0].id);
+                }
+            } catch (err) {
+                console.error("Lỗi tải phương thức thanh toán/vận chuyển:", err);
+            }
+        };
+        loadMethods();
     }, []);
 
     // 1b. Tự động nhận diện và nạp các danh sách Quận/Phường tương ứng nếu người dùng đã có địa chỉ mặc định đã lưu
@@ -117,7 +145,7 @@ export default function CheckoutPage() {
         }
     }, [user, provinces]);
 
-    // 2. Thay đổi tỉnh -> Gọi API lấy Quận/Huyện
+    // 3. Thay đổi tỉnh -> Gọi API lấy Quận/Huyện
     const handleProvinceChange = (e) => {
         const provinceCode = e.target.value;
         setSelectedProvinceCode(provinceCode);
@@ -140,7 +168,7 @@ export default function CheckoutPage() {
             .catch(err => console.error("Lỗi tải quận huyện:", err));
     };
 
-    // 3. Thay đổi Huyện -> Gọi API lấy Phường/Xã
+    // 4. Thay đổi Huyện -> Gọi API lấy Phường/Xã
     const handleDistrictChange = (e) => {
         const districtCode = e.target.value;
         setSelectedDistrictCode(districtCode);
@@ -160,7 +188,7 @@ export default function CheckoutPage() {
             .catch(err => console.error("Lỗi tải phường xã:", err));
     };
 
-    // 4. Thay đổi Phường/Xã
+    // 5. Thay đổi Phường/Xã
     const handleWardChange = (e) => {
         const wardName = e.target.value;
         setFormData(prev => ({
@@ -174,20 +202,118 @@ export default function CheckoutPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmitOrder = (e) => {
+    // Áp dụng Coupon
+    const handleApplyCoupon = async () => {
+        setCouponError('');
+        if (!couponCode.trim()) {
+            setCouponError('Vui lòng nhập mã giảm giá.');
+            return;
+        }
+
+        try {
+            const res = await couponService.getAllCoupons(1, 100);
+            const couponList = res.items || res.Items || [];
+            
+            const matched = couponList.find(c => c.code.toUpperCase() === couponCode.trim().toUpperCase());
+            if (!matched) {
+                setCouponError('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+                setAppliedCoupon(null);
+                setDiscountAmount(0);
+                return;
+            }
+            
+            const now = new Date();
+            if (new Date(matched.startDate) > now || new Date(matched.endDate) < now) {
+                setCouponError('Mã giảm giá đã hết hạn hoặc chưa đến thời gian áp dụng.');
+                return;
+            }
+            
+            if (matched.usedCount >= matched.quantity) {
+                setCouponError('Mã giảm giá đã được sử dụng hết.');
+                return;
+            }
+            
+            if (subTotal < matched.minOrderAmount) {
+                setCouponError(`Đơn hàng tối thiểu phải từ ${formatPrice(matched.minOrderAmount)} để áp dụng.`);
+                return;
+            }
+            
+            let calcDiscount = 0;
+            if (matched.discountType === 'PERCENT') {
+                calcDiscount = (subTotal * matched.discountValue) / 100;
+                if (matched.maxDiscountAmount && calcDiscount > matched.maxDiscountAmount) {
+                    calcDiscount = matched.maxDiscountAmount;
+                }
+            } else {
+                calcDiscount = matched.discountValue;
+            }
+            
+            setAppliedCoupon(matched);
+            setDiscountAmount(calcDiscount);
+            toast.success('Áp dụng mã giảm giá thành công!');
+        } catch (error) {
+            console.error(error);
+            setCouponError('Có lỗi xảy ra khi kiểm tra mã giảm giá.');
+        }
+    };
+
+    // Hủy Coupon
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null);
+        setDiscountAmount(0);
+        setCouponCode('');
+        setCouponError('');
+        toast.success('Đã hủy áp dụng mã giảm giá.');
+    };
+
+    const handlePreSubmitOrder = (e) => {
         e.preventDefault();
-        console.log("=== THÔNG TIN CHECKOUT ===");
-        console.log("Form Data (Họ tên, Email, SĐT, Địa chỉ):", formData);
-        console.log("Phương thức thanh toán:", paymentMethod);
-        console.log("Danh sách sản phẩm:", dummyCartItems);
-        console.log("Chi tiết thanh toán:", {
-            subTotal,
-            shippingFee,
-            taxes,
-            grandTotal
-        });
-        console.log("==========================");
-        setOrderSuccess(true);
+        
+        if (cartItems.length === 0) {
+            toast.error("Giỏ hàng của bạn đang trống!");
+            return;
+        }
+
+        if (!formData.fullName || !formData.phone || !formData.province || !formData.district || !formData.ward || !formData.streetAddress) {
+            toast.error("Vui lòng điền đầy đủ thông tin giao hàng!");
+            return;
+        }
+
+        setConfirmOpen(true);
+    };
+
+    const handleSubmitOrder = async () => {
+        setConfirmOpen(false);
+
+        const payload = {
+            customerAddressId: null, // Luồng khách nhập thông tin địa chỉ trực tiếp
+            receiverName: formData.fullName,
+            phone: formData.phone,
+            province: formData.province,
+            district: formData.district,
+            ward: formData.ward,
+            address: formData.streetAddress,
+            note: formData.notes || null,
+            paymentMethodId: paymentMethod,
+            deliveryMethodId: selectedDeliveryMethod || null,
+            couponCode: appliedCoupon ? appliedCoupon.code : null,
+            items: cartItems.map(item => ({
+                productId: item.id,
+                productVariantId: item.productVariantId || null,
+                quantity: item.qty || item.quantity || 1
+            }))
+        };
+
+        try {
+            const loadingToast = toast.loading("Đang tiến hành đặt hàng...");
+            await orderService.createOrder(payload);
+            toast.dismiss(loadingToast);
+            dispatch(clearCart());
+            setOrderSuccess(true);
+        } catch (err) {
+            console.error("Lỗi khi gửi đơn hàng lên server:", err);
+            toast.error(err.response?.data?.message || err.message || "Đặt hàng thất bại. Vui lòng thử lại!");
+        }
     };
 
     const handleCloseSuccess = () => {
@@ -208,7 +334,7 @@ export default function CheckoutPage() {
                         Thanh toán đơn hàng
                     </Typography>
 
-                    <form onSubmit={handleSubmitOrder}>
+                    <form onSubmit={handlePreSubmitOrder}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'flex-start' }}>
 
                             {/* CỘT BÊN TRÁI: THÔNG TIN GIAO NHẬN & PHƯƠNG THỨC THANH TOÁN */}
@@ -227,21 +353,72 @@ export default function CheckoutPage() {
                                     handleWardChange={handleWardChange}
                                 />
 
+                                {/* 2. PHƯƠNG THỨC VẬN CHUYỂN */}
+                                <Paper elevation={0} sx={{ p: 4, borderRadius: '16px', border: `1px solid ${COLORS.primaryBlue}20`, bgcolor: '#ffffff' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                                        <LocalShippingIcon sx={{ color: COLORS.activeOrange, fontSize: '1.5rem' }} />
+                                        <Typography variant="h6" sx={{ color: COLORS.primaryBlue, fontWeight: 800, textTransform: 'uppercase', fontSize: '1rem', letterSpacing: '0.5px' }}>
+                                            Phương thức vận chuyển
+                                        </Typography>
+                                    </Box>
+                                    <FormControl component="fieldset" fullWidth>
+                                        <RadioGroup
+                                            value={selectedDeliveryMethod}
+                                            onChange={(e) => setSelectedDeliveryMethod(e.target.value)}
+                                        >
+                                            {deliveryMethods.map((method) => {
+                                                const isSelected = selectedDeliveryMethod === method.id;
+                                                return (
+                                                    <Box key={method.id} sx={{
+                                                        p: 2,
+                                                        mb: 2,
+                                                        borderRadius: '10px',
+                                                        border: isSelected ? '2px solid #17479d' : '1px solid #e0e0e0',
+                                                        bgcolor: isSelected ? '#f4f8fc' : 'white',
+                                                        transition: 'all 0.2s'
+                                                    }}>
+                                                        <FormControlLabel
+                                                            value={method.id}
+                                                            control={<Radio color="primary" />}
+                                                            label={
+                                                                <Box>
+                                                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                                        {method.name} ({formatPrice(method.shippingFee || method.ShippingFee || 0)})
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">{method.description}</Typography>
+                                                                </Box>
+                                                            }
+                                                        />
+                                                    </Box>
+                                                );
+                                            })}
+                                        </RadioGroup>
+                                    </FormControl>
+                                </Paper>
+
                                 <PaymentMethod
                                     paymentMethod={paymentMethod}
                                     setPaymentMethod={setPaymentMethod}
+                                    paymentMethods={paymentMethods}
                                 />
                             </Box>
 
                             {/* CỘT BÊN PHẢI: TÓM TẮT ĐƠN HÀNG */}
                             <Box sx={{ flexGrow: 1, width: '100%', position: 'sticky', top: 90 }}>
                                 <OrderSummary
-                                    cartItems={dummyCartItems}
+                                    cartItems={cartItems}
                                     subTotal={subTotal}
                                     shippingFee={shippingFee}
                                     taxes={taxes}
+                                    discountAmount={discountAmount}
                                     grandTotal={grandTotal}
                                     formatPrice={formatPrice}
+                                    couponCode={couponCode}
+                                    setCouponCode={setCouponCode}
+                                    onApplyCoupon={handleApplyCoupon}
+                                    onRemoveCoupon={handleRemoveCoupon}
+                                    appliedCoupon={appliedCoupon}
+                                    couponError={couponError}
                                 />
                             </Box>
 
@@ -249,6 +426,39 @@ export default function CheckoutPage() {
                     </form>
                 </Container>
             </Box>
+
+            {/* DIALOG XÁC NHẬN THANH TOÁN */}
+            <Dialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
+            >
+                <DialogContent>
+                    <HelpIcon sx={{ fontSize: '4.5rem', color: COLORS.activeOrange, mb: 2 }} />
+                    <DialogTitle sx={{ fontWeight: 900, fontSize: '1.4rem', px: 0, pt: 0, pb: 1 }}>Xác nhận đặt hàng</DialogTitle>
+                    <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
+                        Bạn có chắc chắn muốn tiến hành đặt hàng với các thông tin đã điền và số tiền cần thanh toán là <strong>{formatPrice(grandTotal)}</strong>?
+                    </DialogContentText>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            variant="outlined"
+                            fullWidth
+                            sx={{ py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none', color: '#555', borderColor: '#ccc' }}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={handleSubmitOrder}
+                            variant="contained"
+                            fullWidth
+                            sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                        >
+                            Xác nhận
+                        </Button>
+                    </Box>
+                </DialogContent>
+            </Dialog>
 
             {/* DIALOG ĐẶT HÀNG THÀNH CÔNG */}
             <Dialog

@@ -20,7 +20,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import WhatshotIcon from '@mui/icons-material/Whatshot';
 import PhoneIcon from '@mui/icons-material/LocalPhone';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
@@ -91,8 +90,14 @@ export default function Header() {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  // Lấy dữ liệu user từ Redux
+  // Lấy dữ liệu từ Redux
   const { user, loading } = useSelector((state) => state.auth);
+  const { totalQuantity } = useSelector((state) => state.cart);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = (e) => {
     if (e) {
@@ -102,13 +107,13 @@ export default function Header() {
 
     toast((t) => (
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, p: 0.5, minWidth: 280 }}>
-        <Box sx={{ 
-          bgcolor: 'rgba(239, 68, 68, 0.1)', 
-          color: '#ef4444', 
-          borderRadius: '50%', 
-          p: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          bgcolor: 'rgba(239, 68, 68, 0.1)',
+          color: '#ef4444',
+          borderRadius: '50%',
+          p: 1,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0
         }}>
@@ -124,13 +129,13 @@ export default function Header() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-            <Button 
-              size="small" 
-              variant="text" 
+            <Button
+              size="small"
+              variant="text"
               onClick={() => toast.dismiss(t.id)}
-              sx={{ 
-                textTransform: 'none', 
-                fontWeight: 600, 
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
                 color: '#64748b',
                 borderRadius: '8px',
                 px: 2,
@@ -139,23 +144,23 @@ export default function Header() {
             >
               Hủy
             </Button>
-            <Button 
-              size="small" 
-              variant="contained" 
+            <Button
+              size="small"
+              variant="contained"
               onClick={() => {
                 toast.dismiss(t.id);
                 dispatch(logoutUser());
                 router.push('/');
                 toast.success("Đăng xuất thành công!");
               }}
-              sx={{ 
-                textTransform: 'none', 
-                borderRadius: '8px', 
-                px: 2.5, 
+              sx={{
+                textTransform: 'none',
+                borderRadius: '8px',
+                px: 2.5,
                 bgcolor: '#ef4444',
                 fontWeight: 600,
                 boxShadow: 'none',
-                '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' } 
+                '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }
               }}
             >
               Đăng xuất
@@ -203,7 +208,7 @@ export default function Header() {
   const extraCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
 
   const navItems = visibleCategories.map(cat => ({
-    label: `${cat.icon || '📁'} ${cat.title || cat.name}`,
+    label: `${cat.title || cat.name}`,
     href: `/category/${cat.id}`,
     // Chuẩn hóa subItems thành danh sách object { label, href }
     subItems: (cat.subItems || []).map(sub => ({
@@ -352,7 +357,7 @@ export default function Header() {
         {/* Nút Khuyến mãi trên Mobile */}
         <ListItem disablePadding>
           <ListItemButton component={Link} href="/khuyen-mai" onClick={handleDrawerToggle} sx={{ py: 1.5 }}>
-            <WhatshotIcon sx={{ color: '#e53935', mr: 1, fontSize: '1.2rem' }} />
+            <Box component="img" src="/outlet.gif" sx={{ width: 20, height: 20, mr: 1 }} />
             <ListItemText primary="KHUYẾN MÃI" primaryTypographyProps={{ fontWeight: 800, color: '#e53935', fontSize: '0.95rem' }} />
           </ListItemButton>
         </ListItem>
@@ -371,7 +376,7 @@ export default function Header() {
             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', justifyContent: 'space-between', gap: 3 }}>
 
               <Link href="/" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', marginRight: '24px' }}>
-                <Box component="img" src="/logo-art-white.svg" alt="Logo" sx={{ height: 'auto', width: 150, objectFit: 'contain' }} />
+                <Box component="img" src="/logo-art-white.svg" alt="Logo" sx={{ height: 'auto', width: 120, objectFit: 'contain' }} />
                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '1.2rem' }}>
                 </Typography>
               </Link>
@@ -439,7 +444,7 @@ export default function Header() {
                   </Button>
                 )}
                 <IconButton component={Link} href="/cart" aria-label="cart" sx={{ color: COLORS.headerColor, p: 0.5, ml: 0.5 }}>
-                  <Badge badgeContent={1} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
+                  <Badge badgeContent={mounted ? totalQuantity : 0} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
                 </IconButton>
               </Stack>
             </Box>
@@ -449,10 +454,10 @@ export default function Header() {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <IconButton color="inherit" onClick={handleDrawerToggle} sx={{ p: 0.5, ml: -0.5, mr: 1 }}><MenuIcon sx={{ fontSize: '2.2rem' }} /></IconButton>
                 <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Box component="img" src="/logo-art-white.svg" alt="Logo" sx={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+                  <Box component="img" src="/logo-art-white.svg" alt="Logo" sx={{ height: 26, width: 'auto', objectFit: 'contain' }} />
                 </Link>
                 <IconButton component={Link} href="/cart" aria-label="cart" sx={{ color: COLORS.headerColor, p: 0.5, mr: -0.5 }}>
-                  <Badge badgeContent={1} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
+                  <Badge badgeContent={mounted ? totalQuantity : 0} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
                 </IconButton>
               </Box>
               <Box sx={{ display: 'flex', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', height: 42, width: '100%' }}>
@@ -551,7 +556,7 @@ export default function Header() {
                     '&:hover': { color: '#b71c1c' }
                   }}
                 >
-                  <WhatshotIcon sx={{ fontSize: '1.2rem', mr: 0.5 }} />
+                  <Box component="img" src="/outlet.gif" sx={{ width: 20, height: 20, mr: 0.5 }} />
                   OUTLET
                 </Box>
 

@@ -95,6 +95,10 @@ export default function CategoryPage() {
     // Fetch products based on dynamic category slug
     useEffect(() => {
         if (!slug) return;
+        const isUuid = (str) => {
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        };
+
         const fetchCategoryProducts = async () => {
             setLoading(true);
             try {
@@ -102,8 +106,11 @@ export default function CategoryPage() {
                 const subCategorySlug = slug[1];
                 const targetCategoryId = subCategorySlug || mainCategorySlug;
 
-                // Call API with the active category ID
-                const apiProducts = await productService.getProducts({ categoryId: targetCategoryId });
+                let apiProducts = [];
+                if (isUuid(targetCategoryId)) {
+                    // Call API with the active category ID
+                    apiProducts = await productService.getProducts({ categoryId: targetCategoryId });
+                }
                 
                 if (apiProducts && apiProducts.length > 0) {
                     setProducts(apiProducts);

@@ -4,6 +4,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 export default function CartItemList({
   cartItems,
@@ -54,7 +55,7 @@ export default function CartItemList({
 
               <Box
                 component="img"
-                src={item.image}
+                src={getProductImageUrl(item.image)}
                 sx={{ width: 80, height: 80, borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
               />
 
@@ -71,12 +72,12 @@ export default function CartItemList({
                 <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: '#000' }}>
                   {formatPrice(item.price)}
                 </Typography>
-                <Typography sx={{ color: '#9e9e9e', textDecoration: 'line-through', fontSize: '0.85rem' }}>
+                {/* <Typography sx={{ color: '#9e9e9e', textDecoration: 'line-through', fontSize: '0.85rem' }}>
                   {formatPrice(item.originalPrice)}
                 </Typography>
                 <Typography sx={{ bgcolor: '#ff0000', color: 'white', px: 1, py: 0.2, borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
                   {item.discount}
-                </Typography>
+                </Typography> */}
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #e0e0e0', borderRadius: '4px', height: 36, flexShrink: 0 }}>

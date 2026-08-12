@@ -10,6 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import AdminLayout from '../../layouts/AdminLayout';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 const dummyProducts = [
     { id: 1, name: 'Bút Gel Thiên Long Pokémon GEL-045/PKM – Mực Xanh 0.5mm', category: 'Bút học sinh', price: 10800, stock: 245, image: 'https://images.unsplash.com/photo-1583485088034-697b5a624f47?w=150&q=80' },
@@ -94,7 +95,7 @@ export default function AdminProductsPage() {
                             {filteredProducts.map((product) => (
                                 <TableRow key={product.id} hover>
                                     <TableCell>
-                                        <Avatar src={product.image} variant="rounded" sx={{ width: 45, height: 45, border: '1px solid #e0e0e0' }} />
+                                        <Avatar src={getProductImageUrl(product.image)} variant="rounded" sx={{ width: 45, height: 45, border: '1px solid #e0e0e0' }} />
                                     </TableCell>
                                     <TableCell>
                                         <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: '#1a1a1a', maxWidth: 450, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
