@@ -5,9 +5,27 @@ import {
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 export default function ProductCard({ product, onQuickView }) {
   if (!product) return null;
+
+  const displayImage = getProductImageUrl(product.image || product.thumbnail);
+  const displayPrice = typeof product.price === 'number'
+    ? `${product.price.toLocaleString('vi-VN')}đ`
+    : product.price;
+
+  const displayOriginalPrice = typeof product.originalPrice === 'number'
+    ? `${product.originalPrice.toLocaleString('vi-VN')}đ`
+    : product.originalPrice;
+
+  let discountTag = product.discount;
+  if (!discountTag && typeof product.price === 'number' && typeof product.originalPrice === 'number' && product.originalPrice > product.price) {
+    const pct = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+    if (pct > 0) {
+      discountTag = `-${pct}%`;
+    }
+  }
 
   return (
     <Card sx={{
@@ -26,7 +44,7 @@ export default function ProductCard({ product, onQuickView }) {
         <Box sx={{ position: 'relative', pt: '100%', bgcolor: '#fafafa' }}>
           <CardMedia
             component="img"
-            image={product.image}
+            image={displayImage}
             alt={product.name}
             sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', p: 1 }}
           />
@@ -46,13 +64,13 @@ export default function ProductCard({ product, onQuickView }) {
         </Box>
 
         {/* TÊN SẢN PHẨM */}
-        <Typography 
+        <Typography
           component={Link}
           href={`/product/${product.id}`}
-          variant="body2" 
-          sx={{ 
-            fontWeight: 500, color: '#333', mb: 1, 
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', 
+          variant="body2"
+          sx={{
+            fontWeight: 500, color: '#333', mb: 1,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             overflow: 'hidden', minHeight: 40, lineHeight: 1.4,
             textDecoration: 'none',
             '&:hover': { color: '#1890ff' }
@@ -63,24 +81,24 @@ export default function ProductCard({ product, onQuickView }) {
 
         {/* RATING */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
-          <Rating value={product.rating} precision={0.5} readOnly size="small" sx={{ color: '#ffc107', fontSize: '1rem' }} />
-          <Typography variant="caption" sx={{ color: '#9e9e9e', ml: 0.5 }}>({product.reviews})</Typography>
+          <Rating value={product.rating || 5} precision={0.5} readOnly size="small" sx={{ color: '#ffc107', fontSize: '1rem' }} />
+          <Typography variant="caption" sx={{ color: '#9e9e9e', ml: 0.5 }}>({product.reviews || product.reviewCount || 0})</Typography>
         </Box>
 
         {/* GIÁ SẢN PHẨM */}
         <Box sx={{ textAlign: 'center', mt: 'auto' }}>
           <Typography variant="h6" sx={{ color: '#1890ff', fontWeight: 700, fontSize: { xs: '1rem', md: '1.2rem' }, lineHeight: 1 }}>
-            {product.price}
+            {displayPrice}
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-            {product.originalPrice && (
+            {displayOriginalPrice && (
               <Typography variant="caption" sx={{ color: '#9e9e9e', textDecoration: 'line-through' }}>
-                {product.originalPrice}
+                {displayOriginalPrice}
               </Typography>
             )}
-            {product.discount && (
+            {discountTag && (
               <Box sx={{ bgcolor: '#fff1f0', color: '#ff4d4f', px: 0.8, py: 0.2, borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>
-                {product.discount}
+                {discountTag}
               </Box>
             )}
           </Box>

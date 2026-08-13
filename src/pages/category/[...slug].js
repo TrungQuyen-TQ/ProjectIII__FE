@@ -1,10 +1,10 @@
 // src/pages/category/[...slug].js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
-    Box, Container, Typography, Breadcrumbs, Drawer, IconButton
+    Box, Container, Typography, Breadcrumbs, Drawer, IconButton, CircularProgress
 } from '@mui/material';
 
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -18,53 +18,136 @@ import CategoryProductList from '../../sections/category/CategoryProductList';
 
 import { dataProducts as MOCK_PRODUCTS } from '../../data/dataProducts';
 import { dataCategories } from '../../data/dataCategories';
+import categoryService from '../../services/categoryService';
+import productService from '../../services/productService';
 
-const CATEGORY_NAMES = dataCategories.reduce((acc, cat) => {
-    acc[cat.id] = cat.title;
-    return acc;
-}, {});
-
-const CATEGORY_SUBITEMS = dataCategories.reduce((acc, cat) => {
-    acc[cat.id] = cat.subItems;
-    return acc;
-}, {});
-
-const SUB_CATEGORY_NAMES = dataCategories.reduce((acc, cat) => {
-    cat.subItems.forEach((sub, idx) => {
-        acc[`${cat.id}-${idx}`] = sub;
+// Helpers to build tree structure
+const buildCategoryTree = (flatCategories) => {
+    if (!Array.isArray(flatCategories)) return [];
+    const map = {};
+    flatCategories.forEach(cat => {
+        map[cat.id] = {
+            ...cat,
+            title: cat.title || cat.name,
+            subItems: []
+        };
     });
-    return acc;
-}, {});
+
+    const roots = [];
+    flatCategories.forEach(cat => {
+        const mapped = map[cat.id];
+        const parentId = cat.parent_id || cat.parentId;
+        if (parentId && map[parentId]) {
+            map[parentId].subItems.push(mapped);
+        } else {
+            roots.push(mapped);
+        }
+    });
+    return roots;
+};
+
+const normalizeStaticCategories = (staticCats) => {
+    return staticCats.map(cat => ({
+        ...cat,
+        subItems: (cat.subItems || []).map((sub, idx) => {
+            if (typeof sub === 'string') {
+                return { id: `${cat.id}-${idx}`, title: sub };
+            }
+            return sub;
+        })
+    }));
+};
 
 export default function CategoryPage() {
     const router = useRouter();
     const { slug } = router.query;
 
     const [quickViewProduct, setQuickViewProduct] = useState(null);
-    const [mobileFilterOpen, setMobileFilterOpen] = useState(false); // State mở/đóng Drawer bộ lọc mobile
+    const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+    // Dynamic states
+    const [categories, setCategories] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const handleOpenQuickView = (product) => setQuickViewProduct(product);
     const handleCloseQuickView = () => setQuickViewProduct(null);
+    const handleDrawerToggle = () => setMobileFilterOpen(!mobileFilterOpen);
 
-    const handleDrawerToggle = () => {
-        setMobileFilterOpen(!mobileFilterOpen);
-    };
+    // Fetch categories list
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const data = await categoryService.getCategories();
+                if (data && data.length > 0) {
+                    setCategories(buildCategoryTree(data));
+                } else {
+                    setCategories(normalizeStaticCategories(dataCategories));
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải danh mục:", err);
+                setCategories(normalizeStaticCategories(dataCategories));
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    // Fetch products based on dynamic category slug
+    useEffect(() => {
+        if (!slug) return;
+        const isUuid = (str) => {
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        };
+
+        const fetchCategoryProducts = async () => {
+            setLoading(true);
+            try {
+                const mainCategorySlug = slug[0];
+                const subCategorySlug = slug[1];
+                const targetCategoryId = subCategorySlug || mainCategorySlug;
+
+                let apiProducts = [];
+                if (isUuid(targetCategoryId)) {
+                    // Call API with the active category ID
+                    apiProducts = await productService.getProducts({ categoryId: targetCategoryId });
+                }
+                
+                if (apiProducts && apiProducts.length > 0) {
+                    setProducts(apiProducts);
+                } else {
+                    // Fallback to filtering mock products
+                    const mockFiltered = MOCK_PRODUCTS.filter(p => {
+                        if (subCategorySlug) {
+                            return String(p.category) === String(mainCategorySlug) && String(p.subCategory) === String(subCategorySlug);
+                        }
+                        return String(p.category) === String(mainCategorySlug);
+                    });
+                    setProducts(mockFiltered);
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải sản phẩm theo danh mục:", err);
+                setProducts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCategoryProducts();
+    }, [slug]);
 
     if (!slug) return null;
 
     const mainCategorySlug = slug[0];
     const subCategorySlug = slug[1];
 
-    const mainCategoryName = CATEGORY_NAMES[mainCategorySlug] || 'Sản phẩm';
-    const subCategoryName = subCategorySlug ? (SUB_CATEGORY_NAMES[`${mainCategorySlug}-${subCategorySlug}`] || `Phân loại ${subCategorySlug}`) : null;
-    const subItemsList = CATEGORY_SUBITEMS[mainCategorySlug] || [];
+    const mainCategory = categories.find(cat => String(cat.id) === String(mainCategorySlug));
+    const mainCategoryName = mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm';
+    const subItemsListRaw = mainCategory ? (mainCategory.subItems || []) : [];
+    
+    // Map objects to strings so CategoryFilter renders correctly without crashes
+    const subItemsList = subItemsListRaw.map(sub => sub.title || sub.name);
 
-    const filteredProducts = MOCK_PRODUCTS.filter(p => {
-        if (subCategorySlug) {
-            return p.category === mainCategorySlug && p.subCategory === subCategorySlug;
-        }
-        return p.category === mainCategorySlug;
-    });
+    const subCategory = subItemsListRaw.find(sub => String(sub.id) === String(subCategorySlug));
+    const subCategoryName = subCategory ? (subCategory.title || subCategory.name) : (subCategorySlug ? `Phân loại ${subCategorySlug}` : null);
 
     return (
         <>
@@ -98,12 +181,12 @@ export default function CategoryPage() {
                                 <CategoryFilter subItemsList={subItemsList} />
                             </Box>
 
-                            {/* MOBILE DRAWER BỘ LỌC (CHỈ HIỂN THỊ TRÊN MOBILE/TABLET) */}
+                            {/* MOBILE DRAWER BỘ LỌC */}
                             <Drawer
                                 anchor="right"
                                 open={mobileFilterOpen}
                                 onClose={handleDrawerToggle}
-                                ModalProps={{ keepMounted: true }} // Cải thiện hiệu suất mở drawer trên mobile
+                                ModalProps={{ keepMounted: true }}
                                 sx={{
                                     display: { xs: 'block', md: 'none' },
                                     '& .MuiDrawer-paper': { width: 300, boxSizing: 'border-box' },
@@ -115,20 +198,25 @@ export default function CategoryPage() {
                                         <CloseIcon />
                                     </IconButton>
                                 </Box>
-                                {/* Dùng lại component filter, CSS bên trong sẽ tự fit với Drawer */}
                                 <Box sx={{ p: 2 }}>
                                     <CategoryFilter subItemsList={subItemsList} />
                                 </Box>
                             </Drawer>
 
-                            {/* CỘT PHẢI: LƯỚI SẢN PHẨM */}
+                            {/* CỘT PHẢI: LƯỚI SẢN PHẨM HOẶC LOADING */}
                             <Box sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
-                                <CategoryProductList
-                                    filteredProducts={filteredProducts}
-                                    categoryName={subCategoryName || mainCategoryName}
-                                    onQuickView={handleOpenQuickView}
-                                    onOpenFilter={handleDrawerToggle} // Truyền hàm mở Drawer xuống con
-                                />
+                                {loading ? (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10 }}>
+                                        <CircularProgress sx={{ color: '#17479d' }} />
+                                    </Box>
+                                ) : (
+                                    <CategoryProductList
+                                        filteredProducts={products}
+                                        categoryName={subCategoryName || mainCategoryName}
+                                        onQuickView={handleOpenQuickView}
+                                        onOpenFilter={handleDrawerToggle}
+                                    />
+                                )}
                             </Box>
                         </Box>
 

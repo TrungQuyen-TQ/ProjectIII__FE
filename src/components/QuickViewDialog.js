@@ -6,8 +6,16 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../redux/slices/cartSlice';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/router';
+import { getProductImageUrl } from '../utils/imageHelper';
+
 export default function QuickViewDialog({ open, onClose, product }) {
   const [qty, setQty] = useState(1);
+  const dispatch = useDispatch();
+  const router = useRouter();
 
   // Khôi phục số lượng về 1 mỗi khi mở lại dialog
   useEffect(() => {
@@ -17,6 +25,35 @@ export default function QuickViewDialog({ open, onClose, product }) {
   }, [open, product]);
 
   if (!product) return null;
+
+  const handleAddToCart = () => {
+    dispatch(addToCart({ product, quantity: qty }));
+    toast.success('Đã thêm sản phẩm vào giỏ hàng!');
+    if (onClose) onClose();
+  };
+
+  const handleBuyNow = () => {
+    dispatch(addToCart({ product, quantity: qty }));
+    if (onClose) onClose();
+    router.push('/cart');
+  };
+
+  const displayImage = getProductImageUrl(product.image || product.thumbnail);
+  const displayPrice = typeof product.price === 'number' 
+    ? `${product.price.toLocaleString('vi-VN')}đ` 
+    : product.price;
+
+  const displayOriginalPrice = typeof product.originalPrice === 'number'
+    ? `${product.originalPrice.toLocaleString('vi-VN')}đ`
+    : product.originalPrice;
+
+  let discountTag = product.discount;
+  if (!discountTag && typeof product.price === 'number' && typeof product.originalPrice === 'number' && product.originalPrice > product.price) {
+    const pct = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+    if (pct > 0) {
+      discountTag = `-${pct}%`;
+    }
+  }
 
   return (
     <Dialog
@@ -59,7 +96,7 @@ export default function QuickViewDialog({ open, onClose, product }) {
           {/* CỘT TRÁI: HÌNH ẢNH */}
           <Box sx={{ width: { xs: '100%', sm: '50%' } }}>
             <Box sx={{ bgcolor: '#f8f9fa', borderRadius: '8px', p: 1, mb: { xs: 1, sm: 2 }, display: 'flex', justifyContent: 'center' }}>
-              <Box component="img" src={product.image} sx={{ width: '100%', maxHeight: { xs: 280, sm: 350 }, objectFit: 'contain' }} />
+              <Box component="img" src={displayImage} sx={{ width: '100%', maxHeight: { xs: 280, sm: 350 }, objectFit: 'contain' }} />
             </Box>
 
             {/* Ảnh thu nhỏ (Ẩn trên mobile cho gọn giống ảnh mẫu, chỉ hiện trên tablet/desktop) */}
@@ -72,7 +109,7 @@ export default function QuickViewDialog({ open, onClose, product }) {
                   overflow: 'hidden',
                   cursor: 'pointer'
                 }}>
-                  <Box component="img" src={thumb} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Box component="img" src={getProductImageUrl(thumb)} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
               ))}
             </Stack>
@@ -86,7 +123,7 @@ export default function QuickViewDialog({ open, onClose, product }) {
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1.5, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-              Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 500 }}>{product.brand}</span> | Mã sản phẩm: <span style={{ color: '#2962ff' }}>{product.sku}</span>
+              Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 500 }}>{product.brand || 'Khác'}</span> | Mã sản phẩm: <span style={{ color: '#2962ff' }}>{product.sku}</span>
             </Typography>
 
             {/* KHU VỰC GIÁ VÀ TEM GIẢM GIÁ */}
@@ -94,17 +131,17 @@ export default function QuickViewDialog({ open, onClose, product }) {
 
               <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', rowGap: 0.5 }}>
                 <Typography sx={{ color: '#2962ff', fontWeight: 700, mr: 1.5, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-                  {product.price}
+                  {displayPrice}
                 </Typography>
-                {product.originalPrice && (
+                {displayOriginalPrice && (
                   <Typography sx={{ color: '#333', textDecoration: 'line-through', fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
-                    {product.originalPrice}
+                    {displayOriginalPrice}
                   </Typography>
                 )}
               </Box>
 
               {/* Tem hình răng cưa */}
-              {product.discount && (
+              {discountTag && (
                 <Box sx={{
                   bgcolor: '#ff2f4c',
                   color: 'white',
@@ -122,7 +159,7 @@ export default function QuickViewDialog({ open, onClose, product }) {
                     Tiết kiệm
                   </Typography>
                   <Typography variant="subtitle2" sx={{ fontWeight: 900, fontSize: { xs: '0.75rem', sm: '0.85rem' } }}>
-                    {product.discount.replace('-', '').trim()}
+                    {discountTag.replace('-', '').trim()}
                   </Typography>
                 </Box>
               )}
@@ -146,10 +183,20 @@ export default function QuickViewDialog({ open, onClose, product }) {
             {/* NÚT THÊM VÀO GIỎ & MUA NGAY */}
             {/* Sử dụng flexDirection column cho mobile và row cho desktop */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1.5, sm: 2 }, mb: 2, mt: 'auto' }}>
-              <Button fullWidth variant="outlined" sx={{ py: 1.2, borderColor: '#2962ff', color: '#2962ff', fontWeight: 600, borderRadius: '4px', textTransform: 'none', fontSize: '0.95rem', '&:hover': { bgcolor: '#f0f4ff' } }}>
+              <Button 
+                fullWidth 
+                variant="outlined" 
+                onClick={handleAddToCart}
+                sx={{ py: 1.2, borderColor: '#2962ff', color: '#2962ff', fontWeight: 600, borderRadius: '4px', textTransform: 'none', fontSize: '0.95rem', '&:hover': { bgcolor: '#f0f4ff' } }}
+              >
                 THÊM VÀO GIỎ
               </Button>
-              <Button fullWidth variant="contained" sx={{ py: 1.2, bgcolor: '#2962ff', color: 'white', fontWeight: 600, borderRadius: '4px', textTransform: 'none', boxShadow: 'none', fontSize: '0.95rem', '&:hover': { bgcolor: '#1c4cc7' } }}>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                onClick={handleBuyNow}
+                sx={{ py: 1.2, bgcolor: '#2962ff', color: 'white', fontWeight: 600, borderRadius: '4px', textTransform: 'none', boxShadow: 'none', fontSize: '0.95rem', '&:hover': { bgcolor: '#1c4cc7' } }}
+              >
                 MUA NGAY
               </Button>
             </Box>

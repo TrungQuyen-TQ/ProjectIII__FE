@@ -6,6 +6,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import MainLayout from '../layouts/MainLayout';
 import HeroSection from '../sections/home/HeroSection';
 import ProductCategorySection from '../sections/home/ProductCategorySection';
+import CouponSlider from '../sections/home/CouponSlider';
 
 // Import dữ liệu mẫu từ thư mục data
 import { dataProducts } from '../data/dataProducts';
@@ -23,6 +24,8 @@ export default function Home() {
         {/* HERO BANNER */}
         <HeroSection />
 
+        {/* MÃ GIẢM GIÁ (COUPONS SLIDER) */}
+        <CouponSlider />
 
         {/* CÁC DÃY SẢN PHẨM THEO DANH MỤC */}
         <ProductCategorySection/>
