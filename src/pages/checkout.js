@@ -444,30 +444,68 @@ export default function CheckoutPage() {
             <Dialog
                 open={confirmOpen}
                 onClose={() => setConfirmOpen(false)}
-                PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
+                PaperProps={{ 
+                    sx: { 
+                        borderRadius: '24px', 
+                        maxWidth: 330, 
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative'
+                    } 
+                }}
             >
-                <DialogContent>
-                    <HelpIcon sx={{ fontSize: '4.5rem', color: COLORS.activeOrange, mb: 2 }} />
-                    <DialogTitle sx={{ fontWeight: 900, fontSize: '1.4rem', px: 0, pt: 0, pb: 1 }}>Xác nhận đặt hàng</DialogTitle>
-                    <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
-                        Bạn có chắc chắn muốn tiến hành đặt hàng với các thông tin đã điền và số tiền cần thanh toán là <strong>{formatPrice(grandTotal)}</strong>?
+                <button
+                    onClick={() => setConfirmOpen(false)}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '48px 24px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                        <Box sx={{ width: 100, height: 100, borderRadius: '50%', bgcolor: 'rgba(255, 145, 13, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: '#ff910d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </Box>
+                        </Box>
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '24px', color: '#111827', mb: 2 }}>Confirm!</Typography>
+                    <DialogContentText sx={{ color: '#6b7280', fontSize: '0.92rem', fontWeight: 500, mb: 5, textAlign: 'center', lineHeight: 1.6 }}>
+                        Bạn có chắc chắn muốn tiến hành đặt hàng với tổng số tiền thanh toán là <strong style={{ color: '#ff910d' }}>{formatPrice(grandTotal)}</strong>?
                     </DialogContentText>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                            onClick={() => setConfirmOpen(false)}
-                            variant="outlined"
-                            fullWidth
-                            sx={{ py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none', color: '#555', borderColor: '#ccc' }}
-                        >
-                            Hủy
-                        </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
                         <Button
                             onClick={handleSubmitOrder}
                             variant="contained"
                             fullWidth
-                            sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                            sx={{ bgcolor: '#ff910d', py: 1.6, fontWeight: 700, borderRadius: '12px', textTransform: 'none', boxShadow: 'none' }}
                         >
-                            Xác nhận
+                            Xác nhận đặt hàng
+                        </Button>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            variant="text"
+                            fullWidth
+                            sx={{ py: 1, color: '#9ca3af', textTransform: 'none' }}
+                        >
+                            Quay lại
                         </Button>
                     </Box>
                 </DialogContent>
@@ -477,21 +515,68 @@ export default function CheckoutPage() {
             <Dialog
                 open={orderSuccess}
                 onClose={handleCloseSuccess}
-                PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
+                PaperProps={{ 
+                    sx: { 
+                        borderRadius: '24px', 
+                        maxWidth: 330, 
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative'
+                    } 
+                }}
             >
-                <DialogContent>
-                    <CheckCircleIcon sx={{ fontSize: '4.5rem', color: COLORS.success, mb: 2 }} />
-                    <DialogTitle sx={{ fontWeight: 900, fontSize: '1.4rem', px: 0, pt: 0, pb: 1 }}>Đặt hàng thành công!</DialogTitle>
-                    <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
-                        Cảm ơn bạn đã lựa chọn mua sắm tại <strong>Arts</strong>. Đơn hàng của bạn đã được ghi nhận thành công và đang được xử lý giao hàng.
+                <button
+                    onClick={handleCloseSuccess}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '48px 24px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                        <Box sx={{ width: 100, height: 100, borderRadius: '50%', bgcolor: 'rgba(122, 193, 70, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: '#7ac142', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </Box>
+                        </Box>
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '24px', color: '#111827', mb: 2 }}>Success!</Typography>
+                    <DialogContentText sx={{ color: '#6b7280', fontSize: '0.92rem', fontWeight: 500, mb: 5, textAlign: 'center', lineHeight: 1.6 }}>
+                        Cảm ơn bạn đã lựa chọn mua sắm tại <strong>Arts</strong>. Đơn hàng của bạn đã được ghi nhận thành công.
                     </DialogContentText>
                     <Button
                         onClick={handleCloseSuccess}
                         variant="contained"
                         fullWidth
-                        sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                        sx={{
+                            bgcolor: '#7ac142',
+                            py: 1.6,
+                            fontWeight: 700,
+                            borderRadius: '12px',
+                            textTransform: 'none',
+                            fontSize: '15px',
+                            color: '#fff',
+                            boxShadow: 'none',
+                            '&:hover': { bgcolor: '#6ab035', boxShadow: 'none' }
+                        }}
                     >
-                        Quay lại mua sắm
+                        Continue
                     </Button>
                 </DialogContent>
             </Dialog>
