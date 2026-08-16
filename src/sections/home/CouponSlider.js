@@ -217,7 +217,7 @@ export default function CouponSlider() {
                                                 <Box>
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1a1a1a', pr: 1, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                            {discountTitle} {coupon.name}
+                                                            {coupon.name}
                                                         </Typography>
                                                     </Box>
                                                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
