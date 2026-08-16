@@ -47,6 +47,14 @@ const authSlice = createSlice({
             if (state.user) {
                 state.user.address = action.payload; // payload: { province, district, ward, streetAddress }
             }
+        },
+        updateUserInfo: (state, action) => {
+            if (state.user) {
+                state.user = {
+                    ...state.user,
+                    ...action.payload
+                };
+            }
         }
     },
     extraReducers: (builder) => {
@@ -73,5 +81,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { updateUserAddress } = authSlice.actions;
+export const { updateUserAddress, updateUserInfo } = authSlice.actions;
 export default authSlice.reducer;

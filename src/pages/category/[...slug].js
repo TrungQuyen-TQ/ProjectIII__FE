@@ -132,12 +132,42 @@ export default function CategoryPage() {
 
                 let apiProducts = [];
                 if (isUuid(targetCategoryId)) {
-                    // Call API with active category ID & price filters
-                    const params = { categoryId: targetCategoryId };
-                    if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
-                    if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+                    // Check if this is the parent category and has subcategories
+                    const currentCat = categories.find(cat => String(cat.id) === String(targetCategoryId));
+                    const subItems = currentCat ? (currentCat.subItems || []) : [];
 
-                    apiProducts = await productService.getProducts(params);
+                    if (!appliedFilters.selectedSubId && subItems.length > 0) {
+                        // Gather parent ID and all child IDs
+                        const idsToFetch = [targetCategoryId, ...subItems.map(sub => sub.id)];
+                        
+                        // Query all categories in parallel
+                        const apiRequests = idsToFetch.map(id => {
+                            const params = { categoryId: id };
+                            if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                            if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+                            return productService.getProducts(params);
+                        });
+
+                        const results = await Promise.all(apiRequests);
+
+                        // Merge products and remove duplicates
+                        const merged = [];
+                        const seenIds = new Set();
+                        results.flat().forEach(prod => {
+                            if (prod && prod.id && !seenIds.has(prod.id)) {
+                                seenIds.add(prod.id);
+                                merged.push(prod);
+                            }
+                        });
+                        apiProducts = merged;
+                    } else {
+                        // Single category query (child category or parent without child categories)
+                        const params = { categoryId: targetCategoryId };
+                        if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                        if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+
+                        apiProducts = await productService.getProducts(params);
+                    }
                 }
                 
                 if (apiProducts && apiProducts.length > 0) {
@@ -164,7 +194,7 @@ export default function CategoryPage() {
             }
         };
         fetchCategoryProducts();
-    }, [slug, appliedFilters]);
+    }, [slug, appliedFilters, categories]);
 
     if (!slug) return null;
 

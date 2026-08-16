@@ -139,8 +139,40 @@ export default function ProfilePage() {
                             onClick={() => {
                                 toast.dismiss(t.id);
                                 dispatch(logoutUser());
-                                router.push('/');
-                                toast.success("Đăng xuất thành công!");
+                                 router.push('/');
+                                 toast.custom((t) => (
+                                     <div
+                                         className={`${t.visible ? 'toast-custom-enter' : 'toast-custom-leave'} toast-custom-success`}
+                                     >
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                             <div className="toast-icon-success">
+                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                                     <polyline points="20 6 9 17 4 12"></polyline>
+                                                 </svg>
+                                             </div>
+                                             <div>
+                                                 <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>
+                                                     Thông báo
+                                                 </div>
+                                                 <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.3 }}>
+                                                     Đăng xuất thành công!
+                                                 </div>
+                                             </div>
+                                         </div>
+                                         <button 
+                                             onClick={() => toast.dismiss(t.id)}
+                                             className="toast-close-btn"
+                                         >
+                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                 <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                 <line x1="6" y1="6" x2="18" y2="18"></line>
+                                             </svg>
+                                         </button>
+                                     </div>
+                                 ), {
+                                     position: 'top-right',
+                                     duration: 3000
+                                 });
                             }}
                             sx={{ 
                                 textTransform: 'none', 

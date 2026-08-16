@@ -1,5 +1,5 @@
 // src/components/Footer.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Container, Grid, Typography, Stack,
   InputBase, Button, IconButton, Divider
@@ -14,6 +14,9 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import PhoneIcon from '@mui/icons-material/LocalPhone';
 import EmailIcon from '@mui/icons-material/Email';
 
+import { dataCategories } from '../data/dataCategories';
+import categoryService from '../services/categoryService';
+
 const COLORS = {
   footerBg: '#17479d',
   headingColor: '#fdd835',
@@ -21,14 +24,43 @@ const COLORS = {
   textMuted: '#bce2ff'
 };
 
-const navItems = [
-  { label: '🎁 Quà lưu niệm', subItems: ['Đồ Handmade', 'Khung ảnh', 'Móc khóa', 'Gấu bông'] },
-  { label: '💌 Thiệp chúc mừng', subItems: ['Sinh nhật', 'Lễ Tết', 'Tình yêu', '3D Pop-up'] },
-  { label: '🎎 Búp bê', subItems: ['Barbie', 'Len Amigurumi', 'Trang trí', 'Phụ kiện'] },
-  { label: '📁 Cặp tài liệu', subItems: ['Bìa còng', 'Cặp da', 'Clear bag', 'Trình ký'] },
-  { label: '👜 Túi xách', subItems: ['Balo', 'Túi Tote', 'Đeo chéo', 'Ví cầm tay'] },
-  { label: '💄 Mỹ phẩm', subItems: ['Son môi', 'Chăm sóc da', 'Trang điểm', 'Dụng cụ'] },
-];
+const buildCategoryTree = (flatCategories) => {
+  if (!Array.isArray(flatCategories)) return [];
+
+  const map = {};
+  flatCategories.forEach(cat => {
+    map[cat.id] = {
+      ...cat,
+      title: cat.title || cat.name,
+      subItems: []
+    };
+  });
+
+  const roots = [];
+  flatCategories.forEach(cat => {
+    const mapped = map[cat.id];
+    const parentId = cat.parent_id || cat.parentId;
+    if (parentId && map[parentId]) {
+      map[parentId].subItems.push(mapped);
+    } else {
+      roots.push(mapped);
+    }
+  });
+
+  return roots;
+};
+
+const normalizeStaticCategories = (staticCats) => {
+  return staticCats.map(cat => ({
+    ...cat,
+    subItems: (cat.subItems || []).map((sub, idx) => {
+      if (typeof sub === 'string') {
+        return { id: `${cat.id}-${idx}`, title: sub };
+      }
+      return sub;
+    })
+  }));
+};
 
 const policyLinks = [
   { label: 'Hướng dẫn mua hàng', url: '/info/huong-dan-mua-hang' },
@@ -41,24 +73,51 @@ const policyLinks = [
 // --- Sub-component cho Menu ---
 const MenuColumn = ({ items }) => (
   <Stack spacing={4}>
-    {items.map((group, idx) => (
-      <Box key={idx}>
-        <Typography variant="body2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
-          {group.label}
-        </Typography>
-        <Stack spacing={0.5}>
-          {group.subItems.map((sub, sIdx) => (
-            <Typography key={sIdx} variant="caption" sx={{ color: COLORS.textLight, cursor: 'pointer', '&:hover': { color: COLORS.headingColor } }}>
-              {sub}
+    {items.map((group) => {
+      const parentName = group.title || group.name || '';
+      return (
+        <Box key={group.id}>
+          <Link href={`/category/${group.id}`} passHref style={{ textDecoration: 'none' }}>
+            <Typography variant="body2" sx={{ fontWeight: 800, color: COLORS.headingColor, mb: 1, textTransform: 'uppercase', fontSize: '0.75rem', cursor: 'pointer', '&:hover': { color: '#ffffff' } }}>
+              {parentName}
             </Typography>
-          ))}
-        </Stack>
-      </Box>
-    ))}
+          </Link>
+          <Stack spacing={0.5}>
+            {(group.subItems || []).map((sub) => {
+              const childName = sub.title || sub.name || '';
+              return (
+                <Link key={sub.id} href={`/category/${group.id}/${sub.id}`} passHref style={{ textDecoration: 'none' }}>
+                  <Typography variant="caption" sx={{ color: COLORS.textLight, cursor: 'pointer', '&:hover': { color: COLORS.headingColor } }}>
+                    {childName}
+                  </Typography>
+                </Link>
+              );
+            })}
+          </Stack>
+        </Box>
+      );
+    })}
   </Stack>
 );
 
 export default function Footer() {
+  const [categories, setCategories] = useState(() => normalizeStaticCategories(dataCategories));
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        if (data && data.length > 0) {
+          const tree = buildCategoryTree(data);
+          setCategories(tree);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải danh mục từ API ở Footer, sử dụng dữ liệu mặc định:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   return (
     <Box component="footer" suppressHydrationWarning sx={{ bgcolor: COLORS.footerBg, color: COLORS.textLight, pt: 8, width: '100%' }}>
       <Container maxWidth="xl" sx={{ px: { xs: 2, md: 4, lg: 6 }, display: "flex", justifyContent: "space-between", flexDirection: "column", alignItems: "center" }}>
@@ -82,17 +141,29 @@ export default function Footer() {
             </Button>
           </Grid>
 
-          {/* CỘT 2, 3, 4: CHIA MENU RA */}
-          <Grid item xs={6} sm={4} md={2}>
-            <MenuColumn items={[navItems[0], navItems[1]]} />
-          </Grid>
+          {/* CỘT DANH MỤC (CHIA LÀM 2 HÀNG RÕ RÀNG VÀ DÓNG THẲNG HÀNG ĐỀU CỘT) */}
+          <Grid item xs={12} md={6} container rowSpacing={5} columnSpacing={4}>
+            {/* Hàng 1 */}
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[0] ? [categories[0]] : []} />
+            </Grid>
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[2] ? [categories[2]] : []} />
+            </Grid>
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[4] ? [categories[4]] : []} />
+            </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
-            <MenuColumn items={[navItems[2], navItems[3]]} />
-          </Grid>
-
-          <Grid item xs={6} sm={4} md={2}>
-            <MenuColumn items={[navItems[4], navItems[5]]} />
+            {/* Hàng 2 */}
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[1] ? [categories[1]] : []} />
+            </Grid>
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[3] ? [categories[3]] : []} />
+            </Grid>
+            <Grid item xs={6} sm={4}>
+              <MenuColumn items={categories[5] ? [categories[5]] : []} />
+            </Grid>
           </Grid>
 
           {/* CỘT 5: CHÍNH SÁCH */}
@@ -102,7 +173,6 @@ export default function Footer() {
             </Typography>
             <Stack spacing={1}>
               {policyLinks.map((link, i) => (
-                // ĐÃ SỬA: Đưa thẻ Link bọc ra ngoài Typography
                 <Link key={i} href={link.url} passHref style={{ textDecoration: 'none' }}>
                   <Typography
                     variant="caption"

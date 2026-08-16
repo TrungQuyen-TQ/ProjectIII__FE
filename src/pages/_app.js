@@ -16,30 +16,33 @@ function MyApp({ Component, pageProps }) {
   return (
     <Provider store={store}>
       <Toaster 
-        position="top-center" 
+        position="top-right" 
         reverseOrder={false}
         toastOptions={{
           style: {
             background: '#ffffff',
             color: '#1e293b',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            padding: '12px 20px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+            borderRadius: '18px',
+            padding: '14px 20px',
             fontSize: '0.88rem',
-            fontWeight: 500,
-            border: '1px solid #f1f5f9',
+            fontWeight: 600,
+            border: '1.5px solid #f1f5f9',
             fontFamily: '"Inter", "Roboto", sans-serif'
           },
           success: {
             duration: 3000,
             style: {
-              borderLeft: '5px solid #10b981', // xanh lá của success
+              background: '#f0fdf4',
+              border: '1.5px solid #4ade80',
             }
           },
           error: {
             duration: 4000,
             style: {
-              borderLeft: '5px solid #ef4444', // đỏ của error
+              background: '#fef2f2',
+              border: '1.5px solid #fca5a5',
+              color: '#991b1b'
             }
           }
         }}
