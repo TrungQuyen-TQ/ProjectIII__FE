@@ -30,7 +30,7 @@ const COLORS = {
 };
 
 const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + ' vnđ';
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
 };
 
 export default function CheckoutPage() {
@@ -73,6 +73,8 @@ export default function CheckoutPage() {
 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [createdOrder, setCreatedOrder] = useState(null);
+    const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
     // Tính toán số tiền đơn hàng
     const subTotal = cartItems.reduce((sum, item) => sum + item.price * (item.qty || item.quantity || 1), 0);
@@ -319,10 +321,16 @@ export default function CheckoutPage() {
 
         try {
             const loadingToast = toast.loading("Đang tiến hành đặt hàng...");
-            await orderService.createOrder(payload);
+            const orderData = await orderService.createOrder(payload);
             toast.dismiss(loadingToast);
             dispatch(clearCart());
-            setOrderSuccess(true);
+            setCreatedOrder(orderData);
+            
+            if (orderData && orderData.paymentQrUrl) {
+                setQrDialogOpen(true);
+            } else {
+                setOrderSuccess(true);
+            }
         } catch (err) {
             console.error("Lỗi khi gửi đơn hàng lên server:", err);
             toast.error(err.response?.data?.message || err.message || "Đặt hàng thất bại. Vui lòng thử lại!");
@@ -506,6 +514,130 @@ export default function CheckoutPage() {
                             sx={{ py: 1, color: '#9ca3af', textTransform: 'none' }}
                         >
                             Quay lại
+                        </Button>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            {/* DIALOG HIỂN THỊ MÃ QR THANH TOÁN */}
+            <Dialog
+                open={qrDialogOpen}
+                onClose={() => {
+                    setQrDialogOpen(false);
+                    router.push('/');
+                }}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '24px',
+                        maxWidth: 400,
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }
+                }}
+            >
+                <button
+                    onClick={() => {
+                        setQrDialogOpen(false);
+                        router.push('/');
+                    }}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 1, textTransform: 'uppercase', fontSize: '1.1rem', letterSpacing: '0.5px' }}>
+                        Thanh toán đơn hàng
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#6b7280', mb: 3 }}>
+                        Quét mã QR bên dưới bằng ứng dụng Ngân hàng để thanh toán tự động
+                    </Typography>
+
+                    {createdOrder && (
+                        <>
+                            <Box sx={{
+                                p: 2,
+                                bgcolor: '#f8fafc',
+                                borderRadius: '16px',
+                                border: '1px solid #e2e8f0',
+                                mb: 3,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: 220,
+                                height: 220,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                            }}>
+                                <img
+                                    src={createdOrder.paymentQrUrl}
+                                    alt="Mã QR Thanh Toán"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                            </Box>
+
+                            <Box sx={{ width: '100%', bgcolor: '#f1f5f9', p: 2, borderRadius: '12px', mb: 4, textAlign: 'left' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Mã đơn hàng:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>{createdOrder.orderCode}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Số tiền cần trả:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.activeOrange }}>{formatPrice(createdOrder.total)}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Nội dung CK:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>{createdOrder.orderCode}</Typography>
+                                </Box>
+                            </Box>
+                        </>
+                    )}
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
+                        <Button
+                            onClick={() => {
+                                setQrDialogOpen(false);
+                                setOrderSuccess(true);
+                            }}
+                            variant="contained"
+                            fullWidth
+                            sx={{
+                                bgcolor: COLORS.primaryBlue,
+                                py: 1.6,
+                                fontWeight: 700,
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#0f3475', boxShadow: 'none' }
+                            }}
+                        >
+                            Tôi đã chuyển khoản thành công
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setQrDialogOpen(false);
+                                router.push('/');
+                            }}
+                            variant="text"
+                            fullWidth
+                            sx={{ py: 1, color: '#9ca3af', textTransform: 'none' }}
+                        >
+                            Quay lại trang chủ
                         </Button>
                     </Box>
                 </DialogContent>

@@ -12,7 +12,7 @@ import { updateQuantity, removeFromCart, clearCart } from '../redux/slices/cartS
 // Hàm hỗ trợ định dạng tiền tệ (VD: 10800 -> "10,800đ")
 const formatPrice = (price) => {
   const numericPrice = typeof price === 'number' ? price : parseFloat(price) || 0;
-  return new Intl.NumberFormat('vi-VN').format(numericPrice) + ' vnđ';
+  return new Intl.NumberFormat('vi-VN').format(numericPrice) + ' VND';
 };
 
 export default function CartPage() {
