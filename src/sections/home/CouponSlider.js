@@ -26,7 +26,39 @@ export default function CouponSlider() {
 
     const handleCopy = (code) => {
         navigator.clipboard.writeText(code);
-        toast.success(`Đã sao chép mã giảm giá: ${code}`);
+        toast.custom((t) => (
+            <div
+                className={`${t.visible ? 'toast-custom-enter' : 'toast-custom-leave'} toast-custom-success`}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div className="toast-icon-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>
+                            Chúc mừng!
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.3 }}>
+                            Đã lưu mã giảm giá: <strong style={{ color: '#10b981' }}>{code}</strong> thành công.
+                        </div>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => toast.dismiss(t.id)}
+                    className="toast-close-btn"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        ), {
+            position: 'top-right',
+            duration: 3500
+        });
     };
 
     if (coupons.length === 0) return null;
@@ -185,7 +217,7 @@ export default function CouponSlider() {
                                                 <Box>
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1a1a1a', pr: 1, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                            {discountTitle} {coupon.name}
+                                                            {coupon.name}
                                                         </Typography>
                                                     </Box>
                                                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

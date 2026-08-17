@@ -45,7 +45,7 @@ export default function OrderSummary({
                                     {item.name}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    Phân loại: {item.variant || 'Mặc định'} | Qty: {itemQty}
+                                    Phân loại: {item.variant || 'Mặc định'} | Số lượng: {itemQty}
                                 </Typography>
                             </Box>
                             <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.primaryBlue }}>

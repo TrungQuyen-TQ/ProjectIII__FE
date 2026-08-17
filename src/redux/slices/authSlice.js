@@ -18,26 +18,26 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
 });
 
 export const loginUser = createAsyncThunk('auth/login', async (dto, { rejectWithValue }) => {
-    try {
-        console.log('loginUser Thunk: calling authService.login with:', dto);
-        const data = await authService.login(dto);
-        console.log('loginUser Thunk success:', data);
-        return data.user;
-    } catch (err) {
-        console.error('loginUser Thunk error:', err);
-        return rejectWithValue(err.response?.data?.message || 'Đăng nhập thất bại');
+    console.log('loginUser Thunk: calling authService.login with:', dto);
+    const res = await authService.login(dto);
+    if (res.success) {
+        console.log('loginUser Thunk success:', res.data);
+        return res.data.user;
+    } else {
+        console.error('loginUser Thunk error:', res.error);
+        return rejectWithValue(res.error);
     }
 });
 
 export const registerUser = createAsyncThunk('auth/register', async (dto, { rejectWithValue }) => {
-    try {
-        console.log('registerUser Thunk: calling authService.register with:', dto);
-        const data = await authService.register(dto);
-        console.log('registerUser Thunk success:', data);
-        return data;
-    } catch (err) {
-        console.error('registerUser Thunk error:', err);
-        return rejectWithValue(err.response?.data?.message || 'Đăng ký thất bại');
+    console.log('registerUser Thunk: calling authService.register with:', dto);
+    const res = await authService.register(dto);
+    if (res.success) {
+        console.log('registerUser Thunk success:', res.data);
+        return res.data;
+    } else {
+        console.error('registerUser Thunk error:', res.error);
+        return rejectWithValue(res.error);
     }
 });
 
@@ -53,6 +53,14 @@ const authSlice = createSlice({
         updateUserAddress: (state, action) => {
             if (state.user) {
                 state.user.address = action.payload; // payload: { province, district, ward, streetAddress }
+            }
+        },
+        updateUserInfo: (state, action) => {
+            if (state.user) {
+                state.user = {
+                    ...state.user,
+                    ...action.payload
+                };
             }
         }
     },
@@ -80,5 +88,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { updateUserAddress } = authSlice.actions;
+export const { updateUserAddress, updateUserInfo } = authSlice.actions;
 export default authSlice.reducer;

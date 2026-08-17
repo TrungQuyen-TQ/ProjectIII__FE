@@ -52,7 +52,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                disabled={selectedOrder.orderStatusName !== 'Chờ xử lý'}
+                                disabled={selectedOrder.orderStatusName !== 'Mới'}
                                 onClick={onCancelOrder}
                                 sx={{
                                     fontWeight: 700,

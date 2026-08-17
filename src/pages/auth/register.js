@@ -24,7 +24,9 @@ import { toast } from 'react-hot-toast';
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -43,7 +45,7 @@ export default function RegisterPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!username || !email || !password || !confirmPassword) {
+    if (!lastName || !firstName || !email || !password || !confirmPassword) {
       toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       return;
@@ -55,32 +57,16 @@ export default function RegisterPage() {
       return;
     }
 
-    // Tách Họ và Tên thành FirstName, MiddleName, LastName cho khớp C# DTO
-    const nameParts = username.trim().split(/\s+/);
-    let firstName = '';
-    let middleName = '';
-    let lastName = '';
-
-    if (nameParts.length === 1) {
-      firstName = nameParts[0];
-    } else if (nameParts.length === 2) {
-      lastName = nameParts[0];
-      firstName = nameParts[1];
-    } else if (nameParts.length > 2) {
-      lastName = nameParts[0];
-      firstName = nameParts[nameParts.length - 1];
-      middleName = nameParts.slice(1, nameParts.length - 1).join(' ');
-    }
-
     try {
       setLoading(true);
-      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName });
+      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName, RoleId: 2 });
       const actionResult = await dispatch(registerUser({ 
         Email: email, 
         Password: password, 
-        FirstName: firstName, 
-        MiddleName: middleName, 
-        LastName: lastName 
+        FirstName: firstName.trim(), 
+        MiddleName: middleName.trim(), 
+        LastName: lastName.trim(),
+        RoleId: 2
       }));
       console.log('register.js: registerUser result:', actionResult);
       if (registerUser.fulfilled.match(actionResult)) {
@@ -128,29 +114,55 @@ export default function RegisterPage() {
                   {successMsg && <Alert severity="success" sx={{ mb: 2, borderRadius: '8px' }}>{successMsg}</Alert>}
 
                   <Box component="form" noValidate onSubmit={handleSubmit}>
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Họ và Tên <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
-                      <TextField
-                        fullWidth
-                        placeholder="Họ và Tên *"
-                        variant="outlined"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                      />
-                    </Box>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      {/* Dòng 1: Họ & Tên đệm */}
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Họ <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="Họ *"
+                          variant="outlined"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Tên đệm</Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="Tên đệm"
+                          variant="outlined"
+                          value={middleName}
+                          onChange={(e) => setMiddleName(e.target.value)}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                        />
+                      </Grid>
 
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
-                      <TextField
-                        fullWidth
-                        placeholder="Email "
-                        variant="outlined"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                      />
-                    </Box>
+                      {/* Dòng 2: Tên & Email */}
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Tên <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="Tên *"
+                          variant="outlined"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="Email *"
+                          variant="outlined"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                        />
+                      </Grid>
+                    </Grid>
 
                     <Box sx={{ mt: 3 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập mật khẩu của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>

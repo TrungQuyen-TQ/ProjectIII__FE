@@ -43,8 +43,7 @@ export default function OrderListSection({ orders, selectedOrderId, setSelectedO
                                     transition: '0.3s',
                                     bgcolor: '#f8fafc',
                                     '&:hover': {
-                                        boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
-                                        transform: 'translateY(-2px)'
+                                        boxShadow: '0 6px 18px rgba(0,0,0,0.06)'
                                     }
                                 }}
                             >

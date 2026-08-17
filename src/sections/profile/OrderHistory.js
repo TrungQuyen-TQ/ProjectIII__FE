@@ -103,7 +103,12 @@ export default function OrderHistory() {
 
             <Stack spacing={3}>
                 {orders.map((order) => {
-                    const statusInfo = getStatusLabel(order.status || order.Status);
+                    const statusInfo = getStatusLabel(order.status !== undefined ? order.status : order.Status);
+                    const displayStatusLabel = statusInfo.label === 'Không xác định' 
+                        ? (order.orderStatusName || order.OrderStatusName || '') 
+                        : statusInfo.label;
+                    const statusColor = statusInfo.color || COLORS.textMuted;
+
                     const orderDate = new Date(order.createdAt || order.CreatedAt).toLocaleDateString('vi-VN', {
                         day: '2-digit',
                         month: '2-digit',
@@ -112,69 +117,83 @@ export default function OrderHistory() {
                         minute: '2-digit'
                     });
 
+                    const orderTotal = order.total !== undefined ? order.total : (order.Total !== undefined ? order.Total : (order.totalAmount || order.TotalAmount || 0));
+                    const orderItems = order.items || order.Items || [];
+
                     return (
                         <Card key={order.id || order.Id} sx={{ borderRadius: '12px', border: '1px solid #e0eaf5', boxShadow: 'none' }}>
                             <CardContent sx={{ p: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>
-                                        Mã đơn: #{order.orderCode || order.id || order.Id}
-                                    </Typography>
-                                    <Chip
-                                        label={statusInfo.label}
-                                        size="small"
-                                        sx={{
-                                            bgcolor: statusInfo.color + '15',
-                                            color: statusInfo.color,
-                                            fontWeight: 700,
-                                            borderRadius: '6px'
-                                        }}
-                                    />
-                                </Box>
-
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2 }}>
-                                    <AccessTimeIcon sx={{ fontSize: '1rem' }} /> Thời gian đặt: {orderDate}
-                                </Typography>
-
-                                <Stack spacing={1.5} sx={{ mb: 2 }}>
-                                    {(order.items || order.Items || []).map((item, idx) => (
-                                        <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="body2" sx={{ color: '#333', maxWidth: '70%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {item.product?.name || item.Product?.Name || 'Sản phẩm'} {item.variantName ? `(${item.variantName})` : ''} x {item.quantity}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                {((item.price || item.Price || 0) * item.quantity).toLocaleString('vi-VN')}đ
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Stack>
-
-                                <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
-
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Button
-                                        variant="outlined"
-                                        component={Link}
-                                        href="/tracking"
-                                        sx={{
-                                            borderRadius: '8px',
-                                            textTransform: 'none',
-                                            color: COLORS.primaryBlue,
-                                            borderColor: COLORS.primaryBlue,
-                                            fontSize: '0.85rem',
-                                            fontWeight: 700
-                                        }}
-                                    >
-                                        Theo dõi hành trình
-                                    </Button>
-                                    <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="caption" color="text.secondary" display="block">
-                                            Tổng thanh toán:
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                                    {/* Bên trái: Mã đơn và Thời gian đặt */}
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.primaryBlue, lineHeight: 1.2 }}>
+                                            Mã đơn: #{order.orderCode || order.id || order.Id}
                                         </Typography>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.activeOrange }}>
-                                            {(order.totalAmount || order.TotalAmount || 0).toLocaleString('vi-VN')}đ
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.8 }}>
+                                            <AccessTimeIcon sx={{ fontSize: '1rem' }} /> Thời gian đặt: {orderDate}
                                         </Typography>
                                     </Box>
+
+                                    {/* Bên phải: Tổng thanh toán, trạng thái, và Nút theo dõi hành trình */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap' }}>
+                                        <Box sx={{ textAlign: 'left' }}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.75rem', lineHeight: 1.1 }}>
+                                                Tổng thanh toán:
+                                            </Typography>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.activeOrange, lineHeight: 1.2 }}>
+                                                {orderTotal.toLocaleString('vi-VN')}đ
+                                            </Typography>
+                                        </Box>
+
+                                        {displayStatusLabel && (
+                                            <Chip
+                                                label={displayStatusLabel}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: statusColor + '15',
+                                                    color: statusColor,
+                                                    fontWeight: 700,
+                                                    borderRadius: '6px'
+                                                }}
+                                            />
+                                        )}
+
+                                        <Button
+                                            variant="outlined"
+                                            component={Link}
+                                            href="/tracking"
+                                            sx={{
+                                                borderRadius: '8px',
+                                                textTransform: 'none',
+                                                color: COLORS.primaryBlue,
+                                                borderColor: COLORS.primaryBlue,
+                                                fontSize: '0.85rem',
+                                                fontWeight: 700,
+                                                py: 0.6
+                                            }}
+                                        >
+                                            Theo dõi hành trình
+                                        </Button>
+                                    </Box>
                                 </Box>
+
+                                {orderItems.length > 0 && (
+                                    <>
+                                        <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
+                                        <Stack spacing={1.5}>
+                                            {orderItems.map((item, idx) => (
+                                                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant="body2" sx={{ color: '#333', maxWidth: '70%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {item.product?.name || item.Product?.Name || 'Sản phẩm'} {item.variantName ? `(${item.variantName})` : ''} x {item.quantity}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                        {((item.price || item.Price || 0) * item.quantity).toLocaleString('vi-VN')}đ
+                                                    </Typography>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    </>
+                                )}
                             </CardContent>
                         </Card>
                     );

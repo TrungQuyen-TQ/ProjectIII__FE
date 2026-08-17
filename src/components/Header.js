@@ -242,7 +242,7 @@ export default function Header() {
         </Box>
         <Box>
           <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', lineHeight: 1.2 }}>
-            Hi, {user.firstName || user.email}
+            Hi, {user.firstName}
           </Typography>
           <Typography
             variant="caption"
