@@ -123,7 +123,7 @@ export default function CouponSlider() {
                                 });
                                 const discountTitle = coupon.discountType === 'PERCENT'
                                     ? `Giảm ${coupon.discountValue}%`
-                                    : `Giảm ${coupon.discountValue.toLocaleString('vi-VN')}đ`;
+                                    : `Giảm ${coupon.discountValue.toLocaleString('vi-VN')} VNĐ`;
 
                                 return (
                                     <Box key={coupon.id} sx={{ px: 1.5, py: 1 }}>
@@ -221,7 +221,7 @@ export default function CouponSlider() {
                                                         </Typography>
                                                     </Box>
                                                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                        Đơn tối thiểu {coupon.minOrderAmount.toLocaleString('vi-VN')}đ
+                                                        Đơn tối thiểu {coupon.minOrderAmount.toLocaleString('vi-VN')} VNĐ
                                                     </Typography>
                                                 </Box>
 

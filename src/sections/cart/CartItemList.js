@@ -4,6 +4,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import Link from 'next/link';
 import { getProductImageUrl } from '../../utils/imageHelper';
 
 export default function CartItemList({
@@ -14,6 +15,61 @@ export default function CartItemList({
   onClearCart,
   formatPrice
 }) {
+  if (cartItems.length === 0) {
+    return (
+      <Box sx={{ 
+        bgcolor: 'white', 
+        p: { xs: 4, md: 8 }, 
+        borderRadius: '16px', 
+        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center'
+      }}>
+        {/* Biểu tượng túi mua sắm */}
+        <Box sx={{ mb: 3, opacity: 0.3 }}>
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#000' }}>
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+        </Box>
+
+        <Typography variant="h5" sx={{ fontWeight: 800, color: '#111827', mb: 1.5 }}>
+          Bạn chưa có đơn hàng nào
+        </Typography>
+
+        <Typography variant="body2" sx={{ color: '#6b7280', mb: 4, maxWidth: 450, lineHeight: 1.6 }}>
+          Hãy tham khảo các mặt hàng đặc biệt của chúng tôi và đặt đơn hàng đầu tiên!
+        </Typography>
+
+        <Button
+          component={Link}
+          href="/"
+          variant="contained"
+          sx={{
+            bgcolor: '#17479d',
+            color: 'white',
+            fontWeight: 700,
+            px: 4,
+            py: 1.5,
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontSize: '0.95rem',
+            boxShadow: 'none',
+            '&:hover': {
+              bgcolor: '#0f3170',
+              boxShadow: 'none'
+            }
+          }}
+        >
+          Mua sắm ngay
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ bgcolor: 'white', p: { xs: 2, md: 4 }, borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -25,12 +81,7 @@ export default function CartItemList({
         </Typography>
       </Box>
 
-      {cartItems.length === 0 ? (
-        <Typography sx={{ textAlign: 'center', color: '#999', py: 4 }}>
-          Giỏ hàng của bạn đang trống.
-        </Typography>
-      ) : (
-        <Stack spacing={3}>
+      <Stack spacing={3}>
           {cartItems.map((item) => (
             <Box
               key={item.id}
@@ -94,7 +145,6 @@ export default function CartItemList({
             </Box>
           ))}
         </Stack>
-      )}
 
       {cartItems.length > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>

@@ -1,9 +1,10 @@
 // src/pages/tracking.js
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logoutUser } from '../redux/slices/authSlice';
 import { useRouter } from 'next/router';
-import { Box, Container, Typography, Button, CircularProgress, Paper } from '@mui/material';
+import { Box, Container, Typography, Button, CircularProgress, Paper, Tabs, Tab } from '@mui/material';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 
 import MainLayout from '../layouts/MainLayout';
@@ -33,12 +34,33 @@ const trackingSteps = [
 
 export default function TrackingPage() {
     const router = useRouter();
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
+
+    const handleStatusTabChange = (status) => {
+        setSelectedStatusTab(status);
+        const filtered = orders.filter(order => {
+            if (status === 'ALL') return true;
+            return order.orderStatusName === status;
+        });
+        if (filtered.length > 0) {
+            setSelectedOrderId(filtered[0].id || filtered[0].Id);
+        } else {
+            setSelectedOrderId(null);
+        }
+    };
+
+    const filteredOrders = orders.filter(order => {
+        if (selectedStatusTab === 'ALL') return true;
+        return order.orderStatusName === selectedStatusTab;
+    });
 
     useEffect(() => {
         if (!user) {
@@ -64,6 +86,11 @@ export default function TrackingPage() {
                 }
             } catch (err) {
                 console.error("Lỗi khi tải đơn hàng của tôi:", err);
+                if (err.response?.status === 401) {
+                    toast.error("Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại!");
+                    dispatch(logoutUser());
+                    router.push('/auth/login?redirect=/tracking');
+                }
             } finally {
                 setLoading(false);
             }
@@ -124,23 +151,19 @@ export default function TrackingPage() {
 
     const getStatusLabel = (order) => {
         if (!order) return { label: 'Không xác định', color: COLORS.textMuted, stepIndex: -1 };
-        const status = order.orderStatus;
         const label = order.orderStatusName || 'Không xác định';
         
-        switch (status) {
-            case 0:
-                return { label: label, color: COLORS.warning, stepIndex: 0 };
-            case 1:
-                return { label: label, color: COLORS.info, stepIndex: 1 };
-            case 2:
-                return { label: label, color: COLORS.activeOrange, stepIndex: 2 };
-            case 3:
-                return { label: label, color: COLORS.success, stepIndex: 3 };
-            case 4:
-                return { label: label, color: COLORS.error, stepIndex: -1 };
-            default:
-                return { label: label, color: COLORS.textMuted, stepIndex: -1 };
+        if (label === 'Mới') {
+            return { label: label, color: COLORS.warning, stepIndex: 0 };
+        } else if (label === 'Đang xử lý') {
+            return { label: label, color: COLORS.info, stepIndex: 1 };
+        } else if (label === 'Hoàn tất') {
+            return { label: label, color: COLORS.success, stepIndex: 3 };
+        } else if (label === 'Đã hủy') {
+            return { label: label, color: COLORS.error, stepIndex: -1 };
         }
+        
+        return { label: label, color: COLORS.textMuted, stepIndex: -1 };
     };
 
     if (loading) {
@@ -205,11 +228,13 @@ export default function TrackingPage() {
                                     
                                     {/* CỘT TRÁI - DANH SÁCH ĐƠN HÀNG */}
                                     <OrderListSection
-                                        orders={orders}
+                                        orders={filteredOrders}
                                         selectedOrderId={selectedOrderId}
                                         setSelectedOrderId={setSelectedOrderId}
                                         COLORS={COLORS}
                                         getStatusLabel={getStatusLabel}
+                                        selectedStatusTab={selectedStatusTab}
+                                        onStatusTabChange={handleStatusTabChange}
                                     />
 
                                     {/* CỘT PHẢI - CHI TIẾT HÀNH TRÌNH ĐƠN HÀNG */}

@@ -214,7 +214,13 @@ export default function ProfilePage() {
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'flex-start' }}>
 
                         {/* 2. CỘT MENU TRÁI (Chiếm 1/3 ~ 4 phần) */}
-                        <Box sx={{ width: { xs: '100%', md: '33.333%' }, flexShrink: 0 }}>
+                        <Box sx={{ 
+                            width: { xs: '100%', md: '33.333%' }, 
+                            flexShrink: 0,
+                            position: { xs: 'static', md: 'sticky' },
+                            top: { xs: 'auto', md: 140 },
+                            zIndex: 10
+                        }}>
                             <Paper elevation={0} sx={{ p: 3, borderRadius: '16px', border: `1px solid ${COLORS.borderGray}`, bgcolor: '#ffffff' }}>
                                 {/* Avatar & Lời chào */}
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>

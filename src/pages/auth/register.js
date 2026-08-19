@@ -30,6 +30,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,7 @@ export default function RegisterPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!lastName || !firstName || !email || !password || !confirmPassword) {
+    if (!lastName || !firstName || !email || !password || !confirmPassword || !phone) {
       toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       return;
@@ -59,13 +60,14 @@ export default function RegisterPage() {
 
     try {
       setLoading(true);
-      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName, RoleId: 2 });
+      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName, Phone: phone, RoleId: 2 });
       const actionResult = await dispatch(registerUser({ 
         Email: email, 
         Password: password, 
         FirstName: firstName.trim(), 
         MiddleName: middleName.trim(), 
         LastName: lastName.trim(),
+        Phone: phone.trim(),
         RoleId: 2
       }));
       console.log('register.js: registerUser result:', actionResult);
@@ -139,7 +141,7 @@ export default function RegisterPage() {
                         />
                       </Grid>
 
-                      {/* Dòng 2: Tên & Email */}
+                      {/* Dòng 2: Tên & Số điện thoại */}
                       <Grid item xs={12} sm={6}>
                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Tên <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
                         <TextField
@@ -152,6 +154,19 @@ export default function RegisterPage() {
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Số điện thoại <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="Số điện thoại *"
+                          variant="outlined"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                        />
+                      </Grid>
+
+                      {/* Dòng 3: Email */}
+                      <Grid item xs={12}>
                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
                         <TextField
                           fullWidth

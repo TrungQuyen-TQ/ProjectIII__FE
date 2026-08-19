@@ -14,6 +14,11 @@ import { addToCart } from '../../redux/slices/cartSlice';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { getProductImageUrl } from '../../utils/imageHelper';
+import brandService from '../../services/brandService';
+
+const isUuid = (str) => {
+  return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
 
 export default function ProductInfo({
   product,
@@ -60,10 +65,31 @@ export default function ProductInfo({
     return values;
   };
 
+  const [brandName, setBrandName] = useState('');
+
   useEffect(() => {
     setSelectedVariant(null);
     setSelectedAttributes({});
     setSelectedStringVariant('');
+  }, [product]);
+
+  useEffect(() => {
+    const fetchBrand = async () => {
+      setBrandName('');
+      const brandId = product?.brandId || product?.brand || product?.BrandId || product?.Brand;
+      if (brandId && isUuid(brandId)) {
+        const brandData = await brandService.getBrandById(brandId);
+        if (brandData) {
+          setBrandName(brandData.name || brandData.Name || '');
+        }
+      } else if (brandId) {
+        setBrandName(brandId);
+      }
+    };
+
+    if (product) {
+      fetchBrand();
+    }
   }, [product]);
 
   const handleSelectVariant = (v) => {
@@ -142,12 +168,12 @@ export default function ProductInfo({
   const displayImage = getProductImageUrl(activeThumb || product.image || product.thumbnail);
 
   const displayPrice = hasObjectVariants && selectedVariant
-    ? `${selectedVariant.price.toLocaleString('vi-VN')}đ`
-    : (typeof product.price === 'number' ? `${product.price.toLocaleString('vi-VN')}đ` : product.price);
+    ? `${selectedVariant.price.toLocaleString('vi-VN')} VNĐ`
+    : (typeof product.price === 'number' ? `${product.price.toLocaleString('vi-VN')} VNĐ` : product.price);
 
   const displayOriginalPrice = hasObjectVariants && selectedVariant
-    ? (selectedVariant.originalPrice ? `${selectedVariant.originalPrice.toLocaleString('vi-VN')}đ` : null)
-    : (typeof product.originalPrice === 'number' ? `${product.originalPrice.toLocaleString('vi-VN')}đ` : product.originalPrice);
+    ? (selectedVariant.originalPrice ? `${selectedVariant.originalPrice.toLocaleString('vi-VN')} VNĐ` : null)
+    : (typeof product.originalPrice === 'number' ? `${product.originalPrice.toLocaleString('vi-VN')} VNĐ` : product.originalPrice);
 
   const displaySku = hasObjectVariants && selectedVariant
     ? selectedVariant.sku
@@ -203,12 +229,10 @@ export default function ProductInfo({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
             <Rating value={product.rating} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
             <Typography variant="body2" color="text.secondary">({product.reviews} đánh giá)</Typography>
-            <Divider orientation="vertical" flexItem />
-            <Typography variant="body2" color="text.secondary">Đã bán {product.sold}</Typography>
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 600 }}>{product.brand}</span> | Mã sản phẩm: <span style={{ color: '#2962ff', fontWeight: 600 }}>{product.sku}</span>
+            Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 600 }}>{brandName || product.brandName || product.BrandName || 'Khác'}</span> | Mã sản phẩm: <span style={{ color: '#2962ff', fontWeight: 600 }}>{displaySku}</span>
           </Typography>
 
           {/* BẢNG GIÁ KHUYẾN MÃI */}

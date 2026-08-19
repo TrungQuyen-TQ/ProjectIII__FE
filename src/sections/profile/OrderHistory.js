@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, CircularProgress, Stack, Card, CardContent, Divider, Chip } from '@mui/material';
+import { Box, Typography, Stack, Paper, Card, CardContent, Chip, Button, Divider, CircularProgress, Pagination } from '@mui/material';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Link from 'next/link';
@@ -15,9 +14,20 @@ const COLORS = {
     textMuted: '#666'
 };
 
+import React, { useState, useEffect } from 'react';
+
 export default function OrderHistory() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    const [page, setPage] = useState(1);
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(orders.length / itemsPerPage);
+    const paginatedOrders = orders.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    useEffect(() => {
+        setPage(1);
+    }, [orders]);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -102,7 +112,7 @@ export default function OrderHistory() {
             </Typography>
 
             <Stack spacing={3}>
-                {orders.map((order) => {
+                {paginatedOrders.map((order) => {
                     const statusInfo = getStatusLabel(order.status !== undefined ? order.status : order.Status);
                     const displayStatusLabel = statusInfo.label === 'Không xác định' 
                         ? (order.orderStatusName || order.OrderStatusName || '') 
@@ -141,7 +151,7 @@ export default function OrderHistory() {
                                                 Tổng thanh toán:
                                             </Typography>
                                             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.activeOrange, lineHeight: 1.2 }}>
-                                                {orderTotal.toLocaleString('vi-VN')}đ
+                                                {orderTotal.toLocaleString('vi-VN')} VND
                                             </Typography>
                                         </Box>
 
@@ -187,7 +197,7 @@ export default function OrderHistory() {
                                                         {item.product?.name || item.Product?.Name || 'Sản phẩm'} {item.variantName ? `(${item.variantName})` : ''} x {item.quantity}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                        {((item.price || item.Price || 0) * item.quantity).toLocaleString('vi-VN')}đ
+                                                        {((item.price || item.Price || 0) * item.quantity).toLocaleString('vi-VN')} VND
                                                     </Typography>
                                                 </Box>
                                             ))}
@@ -199,6 +209,27 @@ export default function OrderHistory() {
                     );
                 })}
             </Stack>
+
+            {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                    <Pagination 
+                        count={totalPages} 
+                        page={page} 
+                        onChange={(e, value) => setPage(value)} 
+                        color="primary"
+                        sx={{
+                            '& .MuiPaginationItem-root': {
+                                fontWeight: 700,
+                                color: COLORS.primaryBlue
+                            },
+                            '& .Mui-selected': {
+                                bgcolor: COLORS.primaryBlue + ' !important',
+                                color: '#ffffff !important'
+                            }
+                        }}
+                    />
+                </Box>
+            )}
         </Box>
     );
 }

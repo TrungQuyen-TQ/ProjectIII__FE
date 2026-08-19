@@ -12,11 +12,11 @@ export default function ProductCard({ product, onQuickView }) {
 
   const displayImage = getProductImageUrl(product.image || product.thumbnail);
   const displayPrice = typeof product.price === 'number'
-    ? `${product.price.toLocaleString('vi-VN')}đ`
+    ? `${product.price.toLocaleString('vi-VN')} VNĐ`
     : product.price;
 
   const displayOriginalPrice = typeof product.originalPrice === 'number'
-    ? `${product.originalPrice.toLocaleString('vi-VN')}đ`
+    ? `${product.originalPrice.toLocaleString('vi-VN')} VNĐ`
     : product.originalPrice;
 
   let discountTag = product.discount;
