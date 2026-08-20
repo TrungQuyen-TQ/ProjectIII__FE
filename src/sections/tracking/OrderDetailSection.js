@@ -52,7 +52,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                 variant="outlined"
                                 color="error"
                                 size="small"
-                                disabled={selectedOrder.orderStatusName !== 'Chờ xử lý'}
+                                disabled={selectedOrder.orderStatusName !== 'Mới'}
                                 onClick={onCancelOrder}
                                 sx={{
                                     fontWeight: 700,
@@ -187,7 +187,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                             </Typography>
                                         </Box>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>
-                                            {(item.unitPrice || item.price || 0).toLocaleString('vi-VN')}đ
+                                            {(item.unitPrice || item.price || 0).toLocaleString('vi-VN')} VNĐ
                                         </Typography>
                                     </Box>
                                 ))}
@@ -201,20 +201,20 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography variant="body2" color="text.secondary">Tổng tiền hàng:</Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                    {((selectedOrder.total || 0) - (selectedOrder.shippingFee || 0)).toLocaleString('vi-VN')}đ
+                                    {((selectedOrder.total || 0) - (selectedOrder.shippingFee || 0)).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography variant="body2" color="text.secondary">Phí vận chuyển:</Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                    {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')}đ
+                                    {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                             {selectedOrder.discountAmount > 0 && (
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2" color="text.secondary">Giảm giá:</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.error }}>
-                                        -{selectedOrder.discountAmount.toLocaleString('vi-VN')}đ
+                                        -{selectedOrder.discountAmount.toLocaleString('vi-VN')} VNĐ
                                     </Typography>
                                 </Box>
                             )}
@@ -222,7 +222,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>Tổng Thanh Toán:</Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 800, color: COLORS.activeOrange }}>
-                                    {(selectedOrder.total || 0).toLocaleString('vi-VN')}đ
+                                    {(selectedOrder.total || 0).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                         </Stack>

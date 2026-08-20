@@ -35,7 +35,7 @@ export default function AdminProductsPage() {
     );
 
     const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+        return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
     };
 
     return (

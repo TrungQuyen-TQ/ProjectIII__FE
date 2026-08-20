@@ -1,12 +1,13 @@
 // src/pages/khuyen-mai.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   Typography,
   Button,
   Stack,
-  Chip
+  Chip,
+  CircularProgress
 } from '@mui/material';
 
 import MainLayout from '../layouts/MainLayout';
@@ -17,6 +18,9 @@ import {
   TARGET_CATEGORIES,
 } from '../utils/outletHelpers';
 
+import { productApi } from '../api/product-api';
+
+// Dữ liệu mẫu (Dùng để backup nếu API lỗi hoặc server chưa chạy)
 import { dataProducts as productsData } from '../data/dataProducts';
 import { dataCategories as categoriesData } from '../data/dataCategories';
 
@@ -55,15 +59,15 @@ function CategorySectionBlock({ section, onQuickView, onResetTab }) {
         </Stack>
       </Box>
 
-      {/* SỬ DỤNG CSS GRID ĐỂ ÉP CÁC THẺ SẢN PHẨM CÂN BẰNG HOÀN HẢO */}
+      {/* CÂN BẰNG THẺ SẢN PHẨM BẰNG CSS GRID */}
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
-            xs: 'repeat(1, 1fr)', // Mobile: 1 cột
-            sm: 'repeat(2, 1fr)', // Tablet: 2 cột
-            md: 'repeat(3, 1fr)', // Màn hình nhỏ: 3 cột
-            lg: 'repeat(4, 1fr)', // Màn hình chuẩn: ÉP ĐÚNG 4 CỘT CHIA ĐỀU 100%
+            xs: 'repeat(1, 1fr)',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+            lg: 'repeat(4, 1fr)',
           },
           gap: 2.5,
         }}
@@ -92,7 +96,38 @@ export default function OutletPage() {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('ALL');
 
-  const outletSections = getOutletCategorySections(productsData, categoriesData);
+  // KHAI BÁO STATE QUẢN LÝ DỮ LIỆU TỪ API
+  const [dbProducts, setDbProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // GỌI API LẤY SẢN PHẨM THỰC TẾ TỪ DATABASE
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        // Gọi hàm getAll từ productApi
+        const responseData = await productApi.getAll();
+
+        // Chuẩn hóa dữ liệu phòng hờ backend trả về dạng { data: [...] } hoặc { items: [...] }
+        const productList = Array.isArray(responseData)
+          ? responseData
+          : (responseData?.data || responseData?.items || []);
+
+        setDbProducts(productList);
+      } catch (error) {
+        console.error("Lỗi khi kết nối Database lấy sản phẩm:", error);
+        // FALLBACK: Nếu backend sập hoặc chưa bật, load lại data ảo để giao diện không bị lỗi trắng
+        setDbProducts(productsData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Lọc sản phẩm vào các gian hàng (Lưu ý: hàm helper của bạn sẽ tự bóc tách sản phẩm nào có giảm giá)
+  const outletSections = getOutletCategorySections(dbProducts, categoriesData);
   const displayedSections = activeTab === 'ALL' ? outletSections : outletSections.filter((sec) => sec.id === activeTab);
 
   const handleQuickView = (product) => {
@@ -102,7 +137,7 @@ export default function OutletPage() {
 
   return (
     <MainLayout title="Outlet - Xả Kho Giá Hời | Thiên Long">
-      {/* NỀN ẢNH PHÁO HOA + HIỆU ỨNG MỜ DẦN VÀO MÀU XANH ĐEN */}
+      {/* NỀN ẢNH PHÁO HOA CỐ ĐỊNH PARALLAX */}
       <Box
         sx={{
           backgroundColor: '#0f172a',
@@ -120,17 +155,15 @@ export default function OutletPage() {
       >
 
         {/* === HERO BANNER FULL ẢNH === */}
-        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e' }}>
+        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e', display: 'flex', justifyContent: 'center' }}>
           <Box
             component="img"
-            src="/banner/bannermain.jpg"
+            src="/banner/banner-main.jpg"
             alt="ARTS Outlet Xả Kho Giá Hời"
             sx={{
               width: '100%',
+              maxWidth: '1440px',
               height: 'auto',
-              maxHeight: { xs: '300px', sm: '400px', md: '500px', lg: '600px' },
-              objectFit: 'cover',
-              objectPosition: 'center',
               display: 'block',
             }}
           />
@@ -166,13 +199,25 @@ export default function OutletPage() {
 
         {/* === CÁC GIAN HÀNG === */}
         <Container maxWidth="lg">
-          {displayedSections.map((section) => (
-            <CategorySectionBlock key={section.id} section={section} onQuickView={handleQuickView} onResetTab={() => setActiveTab('ALL')} />
-          ))}
-          {displayedSections.length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 8, bgcolor: 'rgba(255,255,255,0.95)', borderRadius: 4, color: '#666', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>Không có sản phẩm giảm giá nào thuộc mục này!</Typography>
+          {/* MÀN HÌNH LOADING */}
+          {isLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
+              <CircularProgress sx={{ color: '#ffda6a', mb: 2 }} />
+              <Typography sx={{ color: '#fff', fontWeight: 600 }}>Đang tải sản phẩm siêu sale...</Typography>
             </Box>
+          ) : (
+            <>
+              {displayedSections.map((section) => (
+                <CategorySectionBlock key={section.id} section={section} onQuickView={handleQuickView} onResetTab={() => setActiveTab('ALL')} />
+              ))}
+
+              {/* NẾU RỖNG SẢN PHẨM */}
+              {displayedSections.length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 8, bgcolor: 'rgba(255,255,255,0.95)', borderRadius: 4, color: '#666', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>Chưa có sản phẩm giảm giá nào trong gian hàng này!</Typography>
+                </Box>
+              )}
+            </>
           )}
         </Container>
 

@@ -48,7 +48,7 @@ export default function AdminOrdersPage() {
     );
 
     const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+        return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
     };
 
     // Chi tiết dịch nghĩa trạng thái sang màu sắc

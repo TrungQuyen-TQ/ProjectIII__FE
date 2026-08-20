@@ -1,26 +1,36 @@
-// src/pages/checkout.js
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { Box, Container, Typography, Dialog, DialogContent, DialogContentText, DialogTitle, Button, RadioGroup, FormControlLabel, Radio, FormControl, Paper } from '@mui/material';
+import { 
+    Box, Container, Typography, Dialog, DialogContent, DialogContentText, DialogTitle, 
+    Button, RadioGroup, FormControlLabel, Radio, FormControl, Paper, IconButton, Divider, TextField,
+    DialogActions, Chip, CircularProgress
+} from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/router';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HelpIcon from '@mui/icons-material/Help';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import MainLayout from '../layouts/MainLayout';
 import toast from 'react-hot-toast';
 
-// Import các components con từ folder sections
-import ShippingInfo from '../sections/checkout/ShippingInfo';
 import PaymentMethod from '../sections/checkout/PaymentMethod';
 import OrderSummary from '../sections/checkout/OrderSummary';
 
-// Import các services
+import addressService from '../services/addressService';
+import AddressFormDialog from '../sections/profile/AddressFormDialog';
+import { clearCart } from '../redux/slices/cartSlice';
+
 import paymentMethodService from '../services/paymentMethodService';
 import deliveryMethodService from '../services/deliveryMethodService';
 import couponService from '../services/couponService';
 import orderService from '../services/orderService';
-import { clearCart } from '../redux/slices/cartSlice';
 
 const COLORS = {
     primaryBlue: '#17479d',
@@ -30,7 +40,7 @@ const COLORS = {
 };
 
 const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
 };
 
 export default function CheckoutPage() {
@@ -38,26 +48,46 @@ export default function CheckoutPage() {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { items: cartItems } = useSelector((state) => state.cart);
+    // Sổ địa chỉ giao hàng
+    const [addresses, setAddresses] = useState([]);
+    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+    const [showAllAddresses, setShowAllAddresses] = useState(false);
+    const [loadingAddresses, setLoadingAddresses] = useState(true);
+    
+    // AddressFormDialog
+    const [formDialogOpen, setFormDialogOpen] = useState(false);
+    const [formDialogMode, setFormDialogMode] = useState('create');
+    const [editingAddress, setEditingAddress] = useState(null);
+    const [tempSelectedAddressId, setTempSelectedAddressId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+    const [confirmDeleteAddress, setConfirmDeleteAddress] = useState(null);
 
-    // Form states - Auto điền thông tin liên hệ và địa chỉ mặc định từ Profile nếu đã lưu
     const [formData, setFormData] = useState({
-        fullName: user ? `${user.lastName || ''} ${user.middleName || ''} ${user.firstName || ''}`.trim() : '',
-        email: user ? user.email : '',
-        phone: user ? user.phone || '' : '',
-        province: user?.address?.province || '',
-        district: user?.address?.district || '',
-        ward: user?.address?.ward || '',
-        streetAddress: user?.address?.streetAddress || '',
         notes: ''
     });
 
-    // Quản lý dữ liệu địa chỉ gọi từ API Online
-    const [provinces, setProvinces] = useState([]);
-    const [districts, setDistricts] = useState([]);
-    const [wards, setWards] = useState([]);
-
-    const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
-    const [selectedDistrictCode, setSelectedDistrictCode] = useState('');
+    const loadAddresses = async () => {
+        setLoadingAddresses(true);
+        try {
+            const data = await addressService.getMyAddresses();
+            const list = Array.isArray(data) ? data : [];
+            setAddresses(list);
+            
+            if (list.length > 0) {
+                const defaultAddr = list.find(a => a.isDefault) || list[0];
+                setSelectedAddress(defaultAddr);
+                setTempSelectedAddressId(defaultAddr.id);
+            } else {
+                setSelectedAddress(null);
+                setTempSelectedAddressId(null);
+            }
+        } catch (err) {
+            console.error("Lỗi khi tải sổ địa chỉ:", err);
+        } finally {
+            setLoadingAddresses(false);
+        }
+    };
 
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [paymentMethod, setPaymentMethod] = useState('');
@@ -73,6 +103,8 @@ export default function CheckoutPage() {
 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [createdOrder, setCreatedOrder] = useState(null);
+    const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
     // Tính toán số tiền đơn hàng
     const subTotal = cartItems.reduce((sum, item) => sum + item.price * (item.qty || item.quantity || 1), 0);
@@ -83,14 +115,17 @@ export default function CheckoutPage() {
 
     const [mounted, setMounted] = useState(false);
 
-    // 1. Tải danh sách Tỉnh/Thành phố khi load trang và set mounted
+    // 1. Set mounted
     useEffect(() => {
         setMounted(true);
-        fetch('https://provinces.open-api.vn/api/p/')
-            .then(res => res.json())
-            .then(data => setProvinces(data))
-            .catch(err => console.error("Lỗi tải tỉnh thành:", err));
     }, []);
+
+    // 2b. Tải sổ địa chỉ
+    useEffect(() => {
+        if (user) {
+            loadAddresses();
+        }
+    }, [user]);
 
     // Bảo vệ trang: Chuyển hướng đăng nhập nếu chưa có user
     useEffect(() => {
@@ -124,91 +159,6 @@ export default function CheckoutPage() {
         loadMethods();
     }, [user]);
 
-    // 1b. Tự động nhận diện và nạp các danh sách Quận/Phường tương ứng nếu người dùng đã có địa chỉ mặc định đã lưu
-    useEffect(() => {
-        if (user?.address?.province && provinces.length > 0) {
-            const foundProv = provinces.find(p => p.name === user.address.province);
-            if (foundProv) {
-                setSelectedProvinceCode(foundProv.code);
-
-                // Nạp Quận/Huyện của Tỉnh này
-                fetch(`https://provinces.open-api.vn/api/p/${foundProv.code}?depth=2`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const distList = data.districts || [];
-                        setDistricts(distList);
-
-                        if (user.address.district) {
-                            const foundDist = distList.find(d => d.name === user.address.district);
-                            if (foundDist) {
-                                setSelectedDistrictCode(foundDist.code);
-
-                                // Nạp Phường/Xã của Huyện này
-                                fetch(`https://provinces.open-api.vn/api/d/${foundDist.code}?depth=2`)
-                                    .then(res => res.json())
-                                    .then(wData => {
-                                        setWards(wData.wards || []);
-                                    })
-                                    .catch(err => console.error("Lỗi tải phường xã mặc định:", err));
-                            }
-                        }
-                    })
-                    .catch(err => console.error("Lỗi tải quận huyện mặc định:", err));
-            }
-        }
-    }, [user, provinces]);
-
-    // 3. Thay đổi tỉnh -> Gọi API lấy Quận/Huyện
-    const handleProvinceChange = (e) => {
-        const provinceCode = e.target.value;
-        setSelectedProvinceCode(provinceCode);
-
-        const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
-        setFormData(prev => ({
-            ...prev,
-            province: provinceName,
-            district: '',
-            ward: ''
-        }));
-
-        setSelectedDistrictCode('');
-        setWards([]);
-        setDistricts([]);
-
-        fetch(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`)
-            .then(res => res.json())
-            .then(data => setDistricts(data.districts || []))
-            .catch(err => console.error("Lỗi tải quận huyện:", err));
-    };
-
-    // 4. Thay đổi Huyện -> Gọi API lấy Phường/Xã
-    const handleDistrictChange = (e) => {
-        const districtCode = e.target.value;
-        setSelectedDistrictCode(districtCode);
-
-        const districtName = districts.find(d => d.code === districtCode)?.name || '';
-        setFormData(prev => ({
-            ...prev,
-            district: districtName,
-            ward: ''
-        }));
-
-        setWards([]);
-
-        fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`)
-            .then(res => res.json())
-            .then(data => setWards(data.wards || []))
-            .catch(err => console.error("Lỗi tải phường xã:", err));
-    };
-
-    // 5. Thay đổi Phường/Xã
-    const handleWardChange = (e) => {
-        const wardName = e.target.value;
-        setFormData(prev => ({
-            ...prev,
-            ward: wardName
-        }));
-    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -279,6 +229,71 @@ export default function CheckoutPage() {
         toast.success('Đã hủy áp dụng mã giảm giá.');
     };
 
+    // Các hàm xử lý xóa địa chỉ có xác nhận
+    const openDeleteConfirm = (address, e) => {
+        if (e) e.stopPropagation();
+        setConfirmDeleteAddress(address);
+    };
+
+    const closeDeleteConfirm = () => {
+        if (deletingId) return;
+        setConfirmDeleteAddress(null);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!confirmDeleteAddress) return;
+        const address = confirmDeleteAddress;
+        try {
+            setDeletingId(address.id);
+            await addressService.deleteAddress(address.id);
+            toast.success('Đã xóa địa chỉ.');
+            
+            if (selectedAddress && selectedAddress.id === address.id) {
+                setSelectedAddress(null);
+                setTempSelectedAddressId(null);
+            }
+            
+            setConfirmDeleteAddress(null);
+            await loadAddresses();
+        } catch (err) {
+            toast.error(err.response?.data || err.message || 'Không thể xóa địa chỉ này.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    // Mở Form Thêm Mới địa chỉ
+    const handleOpenCreateAddress = () => {
+        setFormDialogMode('create');
+        setEditingAddress(null);
+        setFormDialogOpen(true);
+    };
+
+    // Mở Form Sửa địa chỉ
+    const handleOpenEditAddress = (addr) => {
+        setFormDialogMode('edit');
+        setEditingAddress(addr);
+        setFormDialogOpen(true);
+    };
+
+    // Submit dialog address
+    const handleSubmitFormDialog = async (dto) => {
+        try {
+            if (formDialogMode === 'edit' && editingAddress) {
+                await addressService.updateAddress(editingAddress.id, dto);
+                toast.success('Cập nhật địa chỉ thành công!');
+            } else {
+                await addressService.createAddress(dto);
+                toast.success('Thêm địa chỉ mới thành công!');
+            }
+            setFormDialogOpen(false);
+            setEditingAddress(null);
+            await loadAddresses();
+        } catch (err) {
+            toast.error(err.response?.data || err.response?.data?.message || err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+        }
+    };
+
     const handlePreSubmitOrder = (e) => {
         e.preventDefault();
         
@@ -287,8 +302,8 @@ export default function CheckoutPage() {
             return;
         }
 
-        if (!formData.fullName || !formData.phone || !formData.province || !formData.district || !formData.ward || !formData.streetAddress) {
-            toast.error("Vui lòng điền đầy đủ thông tin giao hàng!");
+        if (!selectedAddress) {
+            toast.error("Vui lòng thêm và chọn địa chỉ giao hàng!");
             return;
         }
 
@@ -298,14 +313,18 @@ export default function CheckoutPage() {
     const handleSubmitOrder = async () => {
         setConfirmOpen(false);
 
+        const addressParts = (selectedAddress.provinceCity || '').split(',').map(s => s.trim());
+        const districtName = addressParts[0] || '';
+        const provinceName = addressParts[1] || districtName;
+
         const payload = {
-            customerAddressId: null, // Luồng khách nhập thông tin địa chỉ trực tiếp
-            receiverName: formData.fullName,
-            phone: formData.phone,
-            province: formData.province,
-            district: formData.district,
-            ward: formData.ward,
-            address: formData.streetAddress,
+            customerAddressId: selectedAddress.id,
+            receiverName: selectedAddress.receiverName,
+            phone: selectedAddress.phone,
+            province: provinceName,
+            district: districtName,
+            ward: selectedAddress.wardCommune,
+            address: selectedAddress.addressDetail,
             note: formData.notes || null,
             paymentMethodId: paymentMethod,
             deliveryMethodId: selectedDeliveryMethod || null,
@@ -319,10 +338,23 @@ export default function CheckoutPage() {
 
         try {
             const loadingToast = toast.loading("Đang tiến hành đặt hàng...");
-            await orderService.createOrder(payload);
+            const orderData = await orderService.createOrder(payload);
             toast.dismiss(loadingToast);
             dispatch(clearCart());
-            setOrderSuccess(true);
+            setCreatedOrder(orderData);
+            
+            if (orderData && orderData.paymentQrUrl) {
+                router.push({
+                    pathname: '/QRPayment',
+                    query: {
+                        orderCode: orderData.orderCode,
+                        total: orderData.total,
+                        qrUrl: orderData.paymentQrUrl
+                    }
+                });
+            } else {
+                setOrderSuccess(true);
+            }
         } catch (err) {
             console.error("Lỗi khi gửi đơn hàng lên server:", err);
             toast.error(err.response?.data?.message || err.message || "Đặt hàng thất bại. Vui lòng thử lại!");
@@ -353,18 +385,78 @@ export default function CheckoutPage() {
                             {/* CỘT BÊN TRÁI: THÔNG TIN GIAO NHẬN & PHƯƠNG THỨC THANH TOÁN */}
                             <Box sx={{ width: { xs: '100%', md: '60%' }, display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
 
-                                <ShippingInfo
-                                    formData={formData}
-                                    handleInputChange={handleInputChange}
-                                    provinces={provinces}
-                                    districts={districts}
-                                    wards={wards}
-                                    selectedProvinceCode={selectedProvinceCode}
-                                    selectedDistrictCode={selectedDistrictCode}
-                                    handleProvinceChange={handleProvinceChange}
-                                    handleDistrictChange={handleDistrictChange}
-                                    handleWardChange={handleWardChange}
-                                />
+                                <Paper elevation={0} sx={{ p: 4, borderRadius: '16px', border: `1px solid ${COLORS.primaryBlue}20`, bgcolor: '#ffffff' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                        <Typography variant="h6" sx={{ color: '#333', fontWeight: 800, fontSize: '1.1rem' }}>
+                                            Địa chỉ nhận hàng
+                                        </Typography>
+                                        {addresses.length > 0 && (
+                                            <Button
+                                                onClick={() => {
+                                                    setTempSelectedAddressId(selectedAddress?.id);
+                                                    setAddressDialogOpen(true);
+                                                }}
+                                                sx={{ textTransform: 'none', fontWeight: 600, color: '#1976d2' }}
+                                            >
+                                                Thay đổi
+                                            </Button>
+                                        )}
+                                    </Box>
+
+                                    {loadingAddresses ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                            <CircularProgress size={28} sx={{ color: COLORS.primaryBlue }} />
+                                        </Box>
+                                    ) : selectedAddress ? (
+                                        <Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                                                {selectedAddress.isDefault && (
+                                                    <Chip
+                                                        label="Mặc định"
+                                                        size="small"
+                                                        sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 700, borderRadius: '4px', height: 20, fontSize: '0.75rem' }}
+                                                    />
+                                                )}
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#333' }}>
+                                                    {selectedAddress.receiverName} - {selectedAddress.phone}
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" sx={{ color: '#666', mb: 2 }}>
+                                                {selectedAddress.addressDetail}, {selectedAddress.wardCommune}, {selectedAddress.provinceCity}
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        <Box sx={{ py: 2, textAlign: 'center' }}>
+                                            <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
+                                                Bạn chưa có địa chỉ giao hàng nào.
+                                            </Typography>
+                                            <Button
+                                                variant="outlined"
+                                                onClick={handleOpenCreateAddress}
+                                                startIcon={<AddIcon />}
+                                                sx={{ textTransform: 'none', borderRadius: '8px' }}
+                                            >
+                                                Thêm địa chỉ mới
+                                            </Button>
+                                        </Box>
+                                    )}
+
+                                    <Divider sx={{ my: 2 }} />
+
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333', mb: 1 }}>
+                                        Ghi chú đơn hàng (không bắt buộc)
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={3}
+                                        name="notes"
+                                        placeholder="Nhập ghi chú hoặc yêu cầu đặc biệt của bạn về đơn hàng..."
+                                        value={formData.notes}
+                                        onChange={handleInputChange}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                    />
+                                </Paper>
 
                                 {/* 2. PHƯƠNG THỨC VẬN CHUYỂN */}
                                 <Paper elevation={0} sx={{ p: 4, borderRadius: '16px', border: `1px solid ${COLORS.primaryBlue}20`, bgcolor: '#ffffff' }}>
@@ -417,7 +509,7 @@ export default function CheckoutPage() {
                             </Box>
 
                             {/* CỘT BÊN PHẢI: TÓM TẮT ĐƠN HÀNG */}
-                            <Box sx={{ flexGrow: 1, width: '100%', position: 'sticky', top: 90 }}>
+                            <Box sx={{ flexGrow: 1, width: '100%', position: 'sticky', top: 140 }}>
                                 <OrderSummary
                                     cartItems={cartItems}
                                     subTotal={subTotal}
@@ -444,30 +536,192 @@ export default function CheckoutPage() {
             <Dialog
                 open={confirmOpen}
                 onClose={() => setConfirmOpen(false)}
-                PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
+                PaperProps={{ 
+                    sx: { 
+                        borderRadius: '24px', 
+                        maxWidth: 330, 
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative'
+                    } 
+                }}
             >
-                <DialogContent>
-                    <HelpIcon sx={{ fontSize: '4.5rem', color: COLORS.activeOrange, mb: 2 }} />
-                    <DialogTitle sx={{ fontWeight: 900, fontSize: '1.4rem', px: 0, pt: 0, pb: 1 }}>Xác nhận đặt hàng</DialogTitle>
-                    <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
-                        Bạn có chắc chắn muốn tiến hành đặt hàng với các thông tin đã điền và số tiền cần thanh toán là <strong>{formatPrice(grandTotal)}</strong>?
+                <button
+                    onClick={() => setConfirmOpen(false)}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '48px 24px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                        <Box sx={{ width: 100, height: 100, borderRadius: '50%', bgcolor: 'rgba(255, 145, 13, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: '#ff910d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </Box>
+                        </Box>
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '24px', color: '#111827', mb: 2 }}>Confirm!</Typography>
+                    <DialogContentText sx={{ color: '#6b7280', fontSize: '0.92rem', fontWeight: 500, mb: 5, textAlign: 'center', lineHeight: 1.6 }}>
+                        Bạn có chắc chắn muốn tiến hành đặt hàng với tổng số tiền thanh toán là <strong style={{ color: '#ff910d' }}>{formatPrice(grandTotal)}</strong>?
                     </DialogContentText>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                            onClick={() => setConfirmOpen(false)}
-                            variant="outlined"
-                            fullWidth
-                            sx={{ py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none', color: '#555', borderColor: '#ccc' }}
-                        >
-                            Hủy
-                        </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
                         <Button
                             onClick={handleSubmitOrder}
                             variant="contained"
                             fullWidth
-                            sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                            sx={{ bgcolor: '#ff910d', py: 1.6, fontWeight: 700, borderRadius: '12px', textTransform: 'none', boxShadow: 'none' }}
                         >
-                            Xác nhận
+                            Xác nhận đặt hàng
+                        </Button>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            variant="text"
+                            fullWidth
+                            sx={{ py: 1, color: '#9ca3af', textTransform: 'none' }}
+                        >
+                            Quay lại
+                        </Button>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            {/* DIALOG HIỂN THỊ MÃ QR THANH TOÁN */}
+            <Dialog
+                open={qrDialogOpen}
+                onClose={() => {
+                    setQrDialogOpen(false);
+                    router.push('/');
+                }}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '24px',
+                        maxWidth: 400,
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }
+                }}
+            >
+                <button
+                    onClick={() => {
+                        setQrDialogOpen(false);
+                        router.push('/');
+                    }}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 1, textTransform: 'uppercase', fontSize: '1.1rem', letterSpacing: '0.5px' }}>
+                        Thanh toán đơn hàng
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#6b7280', mb: 3 }}>
+                        Quét mã QR bên dưới bằng ứng dụng Ngân hàng để thanh toán tự động
+                    </Typography>
+
+                    {createdOrder && (
+                        <>
+                            <Box sx={{
+                                p: 2,
+                                bgcolor: '#f8fafc',
+                                borderRadius: '16px',
+                                border: '1px solid #e2e8f0',
+                                mb: 3,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: 220,
+                                height: 220,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                            }}>
+                                <img
+                                    src={createdOrder.paymentQrUrl}
+                                    alt="Mã QR Thanh Toán"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                            </Box>
+
+                            <Box sx={{ width: '100%', bgcolor: '#f1f5f9', p: 2, borderRadius: '12px', mb: 4, textAlign: 'left' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Mã đơn hàng:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>{createdOrder.orderCode}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Số tiền cần trả:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.activeOrange }}>{formatPrice(createdOrder.total)}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>Nội dung CK:</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b' }}>{createdOrder.orderCode}</Typography>
+                                </Box>
+                            </Box>
+                        </>
+                    )}
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
+                        <Button
+                            onClick={() => {
+                                setQrDialogOpen(false);
+                                setOrderSuccess(true);
+                            }}
+                            variant="contained"
+                            fullWidth
+                            sx={{
+                                bgcolor: COLORS.primaryBlue,
+                                py: 1.6,
+                                fontWeight: 700,
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#0f3475', boxShadow: 'none' }
+                            }}
+                        >
+                            Tôi đã chuyển khoản thành công
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setQrDialogOpen(false);
+                                router.push('/');
+                            }}
+                            variant="text"
+                            fullWidth
+                            sx={{ py: 1, color: '#9ca3af', textTransform: 'none' }}
+                        >
+                            Quay lại trang chủ
                         </Button>
                     </Box>
                 </DialogContent>
@@ -477,23 +731,272 @@ export default function CheckoutPage() {
             <Dialog
                 open={orderSuccess}
                 onClose={handleCloseSuccess}
-                PaperProps={{ sx: { borderRadius: '16px', p: 2, textAlign: 'center', maxWidth: 450 } }}
+                PaperProps={{ 
+                    sx: { 
+                        borderRadius: '24px', 
+                        maxWidth: 330, 
+                        width: '100%',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                        position: 'relative'
+                    } 
+                }}
             >
-                <DialogContent>
-                    <CheckCircleIcon sx={{ fontSize: '4.5rem', color: COLORS.success, mb: 2 }} />
-                    <DialogTitle sx={{ fontWeight: 900, fontSize: '1.4rem', px: 0, pt: 0, pb: 1 }}>Đặt hàng thành công!</DialogTitle>
-                    <DialogContentText sx={{ color: '#555', fontSize: '0.95rem', mb: 3 }}>
-                        Cảm ơn bạn đã lựa chọn mua sắm tại <strong>Arts</strong>. Đơn hàng của bạn đã được ghi nhận thành công và đang được xử lý giao hàng.
+                <button
+                    onClick={handleCloseSuccess}
+                    style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        zIndex: 10
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <DialogContent sx={{ p: '48px 24px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                        <Box sx={{ width: 100, height: 100, borderRadius: '50%', bgcolor: 'rgba(122, 193, 70, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: '#7ac142', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </Box>
+                        </Box>
+                    </Box>
+                    <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '24px', color: '#111827', mb: 2 }}>Success!</Typography>
+                    <DialogContentText sx={{ color: '#6b7280', fontSize: '0.92rem', fontWeight: 500, mb: 5, textAlign: 'center', lineHeight: 1.6 }}>
+                        Cảm ơn bạn đã lựa chọn mua sắm tại <strong>Arts</strong>. Đơn hàng của bạn đã được ghi nhận thành công.
                     </DialogContentText>
                     <Button
                         onClick={handleCloseSuccess}
                         variant="contained"
                         fullWidth
-                        sx={{ bgcolor: COLORS.primaryBlue, py: 1.2, fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                        sx={{
+                            bgcolor: '#7ac142',
+                            py: 1.6,
+                            fontWeight: 700,
+                            borderRadius: '12px',
+                            textTransform: 'none',
+                            fontSize: '15px',
+                            color: '#fff',
+                            boxShadow: 'none',
+                            '&:hover': { bgcolor: '#6ab035', boxShadow: 'none' }
+                        }}
                     >
-                        Quay lại mua sắm
+                        Continue
                     </Button>
                 </DialogContent>
+            </Dialog>
+
+            {/* DIALOG CHỌN ĐỊA CHỈ NHẬN HÀNG */}
+            <Dialog
+                open={addressDialogOpen}
+                onClose={() => setAddressDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '16px', p: 1 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: '#333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+                    <span>Địa chỉ nhận hàng</span>
+                    <IconButton onClick={() => setAddressDialogOpen(false)}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ px: 2, py: 1 }}>
+                    <RadioGroup
+                        value={tempSelectedAddressId || ''}
+                    >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {addresses
+                                .slice(0, showAllAddresses ? addresses.length : 3)
+                                .map((addr) => {
+                                    const isSelected = tempSelectedAddressId === addr.id;
+                                    return (
+                                        <Box
+                                            key={addr.id}
+                                            onClick={() => setTempSelectedAddressId(addr.id)}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                p: 2,
+                                                borderRadius: '12px',
+                                                border: isSelected ? `2px solid ${COLORS.primaryBlue}` : '1px solid #e0e0e0',
+                                                bgcolor: isSelected ? '#f4f8fc' : 'white',
+                                                transition: 'all 0.2s',
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    bgcolor: isSelected ? '#f4f8fc' : '#fafafa'
+                                                }
+                                            }}
+                                        >
+                                            <Radio
+                                                checked={isSelected}
+                                                sx={{ 
+                                                    mt: -0.5, 
+                                                    mr: 1,
+                                                    color: COLORS.primaryBlue,
+                                                    '&.Mui-checked': {
+                                                        color: COLORS.primaryBlue
+                                                    }
+                                                }}
+                                            />
+                                            <Box sx={{ flexGrow: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                        {addr.receiverName} - {addr.phone}
+                                                    </Typography>
+                                                    {addr.isDefault && (
+                                                        <Chip
+                                                            label="Địa chỉ mặc định"
+                                                            size="small"
+                                                            sx={{ bgcolor: '#ffe0b2', color: '#e65100', fontWeight: 700, borderRadius: '4px', height: 18, fontSize: '0.65rem' }}
+                                                        />
+                                                    )}
+                                                </Box>
+                                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                                                    {addr.addressDetail}, {addr.wardCommune}, {addr.provinceCity}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', gap: 1, ml: 1 }}>
+                                                <Button
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenEditAddress(addr);
+                                                    }}
+                                                    sx={{ textTransform: 'none', color: '#1976d2', p: 0, minWidth: 0, fontSize: '0.8rem' }}
+                                                >
+                                                    Sửa
+                                                </Button>
+                                                {!addr.isDefault && (
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => openDeleteConfirm(addr, e)}
+                                                        sx={{ color: '#d32f2f', p: 0 }}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    );
+                                })}
+                        </Box>
+                    </RadioGroup>
+
+                    {addresses.length > 3 && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                            <Button
+                                endIcon={showAllAddresses ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                                onClick={() => setShowAllAddresses(!showAllAddresses)}
+                                sx={{ textTransform: 'none', color: '#1976d2', fontWeight: 600 }}
+                            >
+                                {showAllAddresses ? 'Thu gọn' : 'Xem tất cả'}
+                            </Button>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Button
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                            setAddressDialogOpen(false);
+                            handleOpenCreateAddress();
+                        }}
+                        sx={{ textTransform: 'none', fontWeight: 700, color: COLORS.primaryBlue }}
+                    >
+                        Thêm địa chỉ mới
+                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1.5 }}>
+                        <Button
+                            onClick={() => setAddressDialogOpen(false)}
+                            variant="outlined"
+                            sx={{ borderRadius: '20px', textTransform: 'none', px: 3, borderColor: '#e0e0e0', color: '#666' }}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                const selected = addresses.find(a => a.id === tempSelectedAddressId);
+                                if (selected) {
+                                    setSelectedAddress(selected);
+                                }
+                                setAddressDialogOpen(false);
+                            }}
+                            variant="contained"
+                            sx={{ borderRadius: '20px', textTransform: 'none', px: 3, bgcolor: COLORS.primaryBlue, '&:hover': { bgcolor: '#0f3170' } }}
+                        >
+                            Tiếp tục
+                        </Button>
+                    </Box>
+                </DialogActions>
+            </Dialog>
+
+            {/* DIALOG THÊM/SỬA ĐỊA CHỈ */}
+            <AddressFormDialog
+                open={formDialogOpen}
+                mode={formDialogMode}
+                initialAddress={editingAddress}
+                onClose={() => {
+                    setFormDialogOpen(false);
+                    setEditingAddress(null);
+                }}
+                onSubmit={handleSubmitFormDialog}
+            />
+
+            {/* DIALOG XÁC NHẬN XÓA ĐỊA CHỈ */}
+            <Dialog
+                open={!!confirmDeleteAddress}
+                onClose={closeDeleteConfirm}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '16px', p: 0.5 } }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.2, fontWeight: 800, color: '#333' }}>
+                    <Box sx={{
+                        width: 40, height: 40, borderRadius: '50%',
+                        bgcolor: '#fdecea', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                        <WarningAmberIcon sx={{ color: '#d32f2f' }} />
+                    </Box>
+                    Xóa địa chỉ này?
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ color: '#666' }}>
+                        Bạn có chắc muốn xóa địa chỉ của{' '}
+                        <Box component="span" sx={{ fontWeight: 700, color: '#333' }}>
+                            {confirmDeleteAddress?.receiverName}
+                        </Box>
+                        ? Hành động này không thể hoàn tác.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                    <Button
+                        onClick={closeDeleteConfirm}
+                        disabled={!!deletingId}
+                        sx={{ textTransform: 'none', fontWeight: 700, color: '#666' }}
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleConfirmDelete}
+                        disabled={!!deletingId}
+                        variant="contained"
+                        color="error"
+                        sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', boxShadow: 'none', px: 3 }}
+                    >
+                        {deletingId ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Xóa địa chỉ'}
+                    </Button>
+                </DialogActions>
             </Dialog>
 
         </MainLayout>

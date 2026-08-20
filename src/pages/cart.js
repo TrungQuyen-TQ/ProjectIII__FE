@@ -12,7 +12,7 @@ import { updateQuantity, removeFromCart, clearCart } from '../redux/slices/cartS
 // Hàm hỗ trợ định dạng tiền tệ (VD: 10800 -> "10,800đ")
 const formatPrice = (price) => {
   const numericPrice = typeof price === 'number' ? price : parseFloat(price) || 0;
-  return new Intl.NumberFormat('vi-VN').format(numericPrice) + 'đ';
+  return new Intl.NumberFormat('vi-VN').format(numericPrice) + ' VNĐ';
 };
 
 export default function CartPage() {
@@ -72,7 +72,7 @@ export default function CartPage() {
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 4 }}>
               
               {/* CỘT TRÁI: DANH SÁCH SẢN PHẨM */}
-              <Box sx={{ flex: { xs: '1 1 100%', md: '2 1 0%' }, width: '100%', minWidth: 0 }}>
+              <Box sx={{ flex: cartItems.length > 0 ? { xs: '1 1 100%', md: '2 1 0%' } : '1 1 100%', width: '100%', minWidth: 0 }}>
                 <CartItemList
                   cartItems={cartItems}
                   onIncrease={handleIncrease}
@@ -84,17 +84,19 @@ export default function CartPage() {
               </Box>
 
               {/* CỘT PHẢI: ORDER SUMMARY */}
-              <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 0%' }, width: '100%', minWidth: 0, position: 'sticky', top: 120 }}>
-                <CartSummary
-                  cartItems={cartItems}
-                  totalItems={totalItems}
-                  subTotal={subTotal}
-                  shippingFee={shippingFee}
-                  taxes={taxes}
-                  grandTotal={grandTotal}
-                  formatPrice={formatPrice}
-                />
-              </Box>
+              {cartItems.length > 0 && (
+                <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 0%' }, width: '100%', minWidth: 0, position: 'sticky', top: 120 }}>
+                  <CartSummary
+                    cartItems={cartItems}
+                    totalItems={totalItems}
+                    subTotal={subTotal}
+                    shippingFee={shippingFee}
+                    taxes={taxes}
+                    grandTotal={grandTotal}
+                    formatPrice={formatPrice}
+                  />
+                </Box>
+              )}
 
             </Box>
           </Container>

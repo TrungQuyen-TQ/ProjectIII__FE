@@ -70,6 +70,16 @@ export default function CategoryPage() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Filter states
+    const [selectedSubId, setSelectedSubId] = useState('');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [appliedFilters, setAppliedFilters] = useState({
+        selectedSubId: '',
+        minPrice: '',
+        maxPrice: ''
+    });
+
     const handleOpenQuickView = (product) => setQuickViewProduct(product);
     const handleCloseQuickView = () => setQuickViewProduct(null);
     const handleDrawerToggle = () => setMobileFilterOpen(!mobileFilterOpen);
@@ -92,7 +102,22 @@ export default function CategoryPage() {
         fetchCategories();
     }, []);
 
-    // Fetch products based on dynamic category slug
+    // Sync filter states when slug changes
+    useEffect(() => {
+        if (slug) {
+            const subId = slug[1] || '';
+            setSelectedSubId(subId);
+            setMinPrice('');
+            setMaxPrice('');
+            setAppliedFilters({
+                selectedSubId: subId,
+                minPrice: '',
+                maxPrice: ''
+            });
+        }
+    }, [slug]);
+
+    // Fetch products based on dynamic category slug & applied filters
     useEffect(() => {
         if (!slug) return;
         const isUuid = (str) => {
@@ -103,13 +128,54 @@ export default function CategoryPage() {
             setLoading(true);
             try {
                 const mainCategorySlug = slug[0];
-                const subCategorySlug = slug[1];
-                const targetCategoryId = subCategorySlug || mainCategorySlug;
+                const targetCategoryId = appliedFilters.selectedSubId || mainCategorySlug;
+                const searchParam = router.query.Search;
 
                 let apiProducts = [];
-                if (isUuid(targetCategoryId)) {
-                    // Call API with the active category ID
-                    apiProducts = await productService.getProducts({ categoryId: targetCategoryId });
+                if (mainCategorySlug === 'search' || searchParam) {
+                    const params = {};
+                    if (searchParam) params.Search = searchParam;
+                    if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                    if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+
+                    apiProducts = await productService.getProducts(params);
+                } else if (isUuid(targetCategoryId)) {
+                    // Check if this is the parent category and has subcategories
+                    const currentCat = categories.find(cat => String(cat.id) === String(targetCategoryId));
+                    const subItems = currentCat ? (currentCat.subItems || []) : [];
+
+                    if (!appliedFilters.selectedSubId && subItems.length > 0) {
+                        // Gather parent ID and all child IDs
+                        const idsToFetch = [targetCategoryId, ...subItems.map(sub => sub.id)];
+                        
+                        // Query all categories in parallel
+                        const apiRequests = idsToFetch.map(id => {
+                            const params = { categoryId: id };
+                            if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                            if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+                            return productService.getProducts(params);
+                        });
+
+                        const results = await Promise.all(apiRequests);
+
+                        // Merge products and remove duplicates
+                        const merged = [];
+                        const seenIds = new Set();
+                        results.flat().forEach(prod => {
+                            if (prod && prod.id && !seenIds.has(prod.id)) {
+                                seenIds.add(prod.id);
+                                merged.push(prod);
+                            }
+                        });
+                        apiProducts = merged;
+                    } else {
+                        // Single category query (child category or parent without child categories)
+                        const params = { categoryId: targetCategoryId };
+                        if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                        if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+
+                        apiProducts = await productService.getProducts(params);
+                    }
                 }
                 
                 if (apiProducts && apiProducts.length > 0) {
@@ -117,22 +183,31 @@ export default function CategoryPage() {
                 } else {
                     // Fallback to filtering mock products
                     const mockFiltered = MOCK_PRODUCTS.filter(p => {
-                        if (subCategorySlug) {
-                            return String(p.category) === String(mainCategorySlug) && String(p.subCategory) === String(subCategorySlug);
+                        const price = p.price || 0;
+                        if (appliedFilters.minPrice && price < parseFloat(appliedFilters.minPrice)) return false;
+                        if (appliedFilters.maxPrice && price > parseFloat(appliedFilters.maxPrice)) return false;
+
+                        if (searchParam) {
+                            const term = String(searchParam).toLowerCase();
+                            return String(p.title || p.name || '').toLowerCase().includes(term);
+                        }
+
+                        if (appliedFilters.selectedSubId) {
+                            return String(p.subCategory) === String(appliedFilters.selectedSubId);
                         }
                         return String(p.category) === String(mainCategorySlug);
                     });
                     setProducts(mockFiltered);
                 }
             } catch (err) {
-                console.error("Lỗi khi tải sản phẩm theo danh mục:", err);
+                console.error("Lỗi khi tải sản phẩm theo danh mục/tìm kiếm:", err);
                 setProducts([]);
             } finally {
                 setLoading(false);
             }
         };
         fetchCategoryProducts();
-    }, [slug]);
+    }, [slug, appliedFilters, categories, router.query.Search]);
 
     if (!slug) return null;
 
@@ -140,14 +215,33 @@ export default function CategoryPage() {
     const subCategorySlug = slug[1];
 
     const mainCategory = categories.find(cat => String(cat.id) === String(mainCategorySlug));
-    const mainCategoryName = mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm';
+    const mainCategoryName = mainCategorySlug === 'search' ? `Tìm kiếm: "${router.query.Search || ''}"` : (mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm');
     const subItemsListRaw = mainCategory ? (mainCategory.subItems || []) : [];
-    
-    // Map objects to strings so CategoryFilter renders correctly without crashes
-    const subItemsList = subItemsListRaw.map(sub => sub.title || sub.name);
 
-    const subCategory = subItemsListRaw.find(sub => String(sub.id) === String(subCategorySlug));
-    const subCategoryName = subCategory ? (subCategory.title || subCategory.name) : (subCategorySlug ? `Phân loại ${subCategorySlug}` : null);
+    const subCategory = subItemsListRaw.find(sub => String(sub.id) === String(appliedFilters.selectedSubId || subCategorySlug));
+    const subCategoryName = subCategory ? (subCategory.title || subCategory.name) : (appliedFilters.selectedSubId || subCategorySlug ? `Phân loại` : null);
+
+    const handleApplyFilters = () => {
+        setAppliedFilters({
+            selectedSubId,
+            minPrice,
+            maxPrice
+        });
+        setMobileFilterOpen(false);
+    };
+
+    const handleResetFilters = () => {
+        const subId = slug[1] || '';
+        setSelectedSubId(subId);
+        setMinPrice('');
+        setMaxPrice('');
+        setAppliedFilters({
+            selectedSubId: subId,
+            minPrice: '',
+            maxPrice: ''
+        });
+        setMobileFilterOpen(false);
+    };
 
     return (
         <>
@@ -169,7 +263,7 @@ export default function CategoryPage() {
                             ) : (
                                 <Typography sx={{ color: '#17479d', fontWeight: 600 }}>{mainCategoryName}</Typography>
                             )}
-                            {subCategorySlug && (
+                            {(subCategorySlug || appliedFilters.selectedSubId) && (
                                 <Typography sx={{ color: '#17479d', fontWeight: 600 }}>{subCategoryName}</Typography>
                             )}
                         </Breadcrumbs>
@@ -178,7 +272,17 @@ export default function CategoryPage() {
 
                             {/* CỘT TRÁI: BỘ LỌC (CHỈ HIỂN THỊ TRÊN DESKTOP) */}
                             <Box sx={{ display: { xs: 'none', md: 'block' }, width: '260px', flexShrink: 0 }}>
-                                <CategoryFilter subItemsList={subItemsList} />
+                                <CategoryFilter
+                                    subCategories={subItemsListRaw}
+                                    selectedSubId={selectedSubId}
+                                    onSelectSubId={setSelectedSubId}
+                                    minPrice={minPrice}
+                                    maxPrice={maxPrice}
+                                    onMinPriceChange={setMinPrice}
+                                    onMaxPriceChange={setMaxPrice}
+                                    onApply={handleApplyFilters}
+                                    onReset={handleResetFilters}
+                                />
                             </Box>
 
                             {/* MOBILE DRAWER BỘ LỌC */}
@@ -199,7 +303,17 @@ export default function CategoryPage() {
                                     </IconButton>
                                 </Box>
                                 <Box sx={{ p: 2 }}>
-                                    <CategoryFilter subItemsList={subItemsList} />
+                                    <CategoryFilter
+                                        subCategories={subItemsListRaw}
+                                        selectedSubId={selectedSubId}
+                                        onSelectSubId={setSelectedSubId}
+                                        minPrice={minPrice}
+                                        maxPrice={maxPrice}
+                                        onMinPriceChange={setMinPrice}
+                                        onMaxPriceChange={setMaxPrice}
+                                        onApply={handleApplyFilters}
+                                        onReset={handleResetFilters}
+                                    />
                                 </Box>
                             </Drawer>
 
@@ -209,7 +323,7 @@ export default function CategoryPage() {
                                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10 }}>
                                         <CircularProgress sx={{ color: '#17479d' }} />
                                     </Box>
-                                ) : (
+                               ) : (
                                     <CategoryProductList
                                         filteredProducts={products}
                                         categoryName={subCategoryName || mainCategoryName}

@@ -11,9 +11,16 @@ import { addToCart } from '../redux/slices/cartSlice';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { getProductImageUrl } from '../utils/imageHelper';
+import brandService from '../services/brandService';
+import productService from '../services/productService';
+
+const isUuid = (str) => {
+  return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
 
 export default function QuickViewDialog({ open, onClose, product }) {
   const [qty, setQty] = useState(1);
+  const [brandName, setBrandName] = useState('');
   const dispatch = useDispatch();
   const router = useRouter();
 
@@ -21,6 +28,39 @@ export default function QuickViewDialog({ open, onClose, product }) {
   useEffect(() => {
     if (open) {
       setQty(1);
+    }
+  }, [open, product]);
+
+  // Tải tên thương hiệu từ API
+  useEffect(() => {
+    const fetchBrand = async () => {
+      setBrandName('');
+      let brandId = product?.brandId || product?.brand || product?.BrandId || product?.Brand;
+      
+      // Nếu không có brandId ở đối tượng danh sách (ProductListDto), hãy gọi API lấy chi tiết sản phẩm
+      if (!brandId && product?.id) {
+        try {
+          const detail = await productService.getProductById(product.id);
+          if (detail) {
+            brandId = detail.brandId || detail.BrandId;
+          }
+        } catch (e) {
+          console.error("Lỗi khi lấy chi tiết sản phẩm trong QuickView:", e);
+        }
+      }
+
+      if (brandId && isUuid(brandId)) {
+        const brandData = await brandService.getBrandById(brandId);
+        if (brandData) {
+          setBrandName(brandData.name || brandData.Name || '');
+        }
+      } else if (brandId) {
+        setBrandName(brandId);
+      }
+    };
+
+    if (open && product) {
+      fetchBrand();
     }
   }, [open, product]);
 
@@ -40,11 +80,11 @@ export default function QuickViewDialog({ open, onClose, product }) {
 
   const displayImage = getProductImageUrl(product.image || product.thumbnail);
   const displayPrice = typeof product.price === 'number' 
-    ? `${product.price.toLocaleString('vi-VN')}đ` 
+    ? `${product.price.toLocaleString('vi-VN')} VNĐ` 
     : product.price;
 
   const displayOriginalPrice = typeof product.originalPrice === 'number'
-    ? `${product.originalPrice.toLocaleString('vi-VN')}đ`
+    ? `${product.originalPrice.toLocaleString('vi-VN')} VNĐ`
     : product.originalPrice;
 
   let discountTag = product.discount;
@@ -123,7 +163,7 @@ export default function QuickViewDialog({ open, onClose, product }) {
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1.5, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-              Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 500 }}>{product.brand || 'Khác'}</span> | Mã sản phẩm: <span style={{ color: '#2962ff' }}>{product.sku}</span>
+              Thương hiệu: <span style={{ color: '#2962ff', fontWeight: 500 }}>{brandName || product.brandName || product.BrandName || 'Khác'}</span> | Mã sản phẩm: <span style={{ color: '#2962ff' }}>{product.sku}</span>
             </Typography>
 
             {/* KHU VỰC GIÁ VÀ TEM GIẢM GIÁ */}
@@ -201,7 +241,14 @@ export default function QuickViewDialog({ open, onClose, product }) {
               </Button>
             </Box>
 
-            <Typography variant="body2" sx={{ color: '#ff2f4c', fontWeight: 600, cursor: 'pointer', mt: { xs: 0, sm: 1 }, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+            <Typography 
+              variant="body2" 
+              onClick={() => {
+                if (onClose) onClose();
+                router.push(`/product/${product.id}`);
+              }}
+              sx={{ color: '#ff2f4c', fontWeight: 600, cursor: 'pointer', mt: { xs: 0, sm: 1 }, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+            >
               &gt;&gt; Xem chi tiết sản phẩm
             </Typography>
 
