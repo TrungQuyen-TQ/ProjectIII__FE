@@ -166,7 +166,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
                 lineHeight: 1.2,
               }}
             >
-              {price.toLocaleString('vi-VN')}đ
+              {price.toLocaleString('vi-VN')} VNĐ
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3 }}>
@@ -177,7 +177,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
                   textDecoration: 'line-through',
                 }}
               >
-                {originalPrice.toLocaleString('vi-VN')}đ
+                {originalPrice.toLocaleString('vi-VN')} VNĐ
               </Typography>
               <Box
                 component="span"

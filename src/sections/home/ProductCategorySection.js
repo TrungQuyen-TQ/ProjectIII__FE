@@ -81,35 +81,61 @@ export default function ProductCategorySection() {
       setLoading(true);
       try {
         // Fetch categories from API
-        let catData = await categoryService.getCategories();
-        if (catData && catData.length > 0) {
+        let allCategories = await categoryService.getCategories();
+        let catData = [];
+        if (allCategories && allCategories.length > 0) {
           // Chỉ lấy danh mục chính (không có parentId hoặc parent_id)
-          catData = catData.filter(cat => !cat.parentId && !cat.parent_id);
+          catData = allCategories.filter(cat => !cat.parentId && !cat.parent_id);
         } else {
+          allCategories = STATIC_CATEGORIES;
           catData = STATIC_CATEGORIES;
         }
 
-        // Fetch products for each category
+        // Fetch products for each parent category (including its children categories)
         const tempProducts = {};
         for (const cat of catData) {
           const catSlug = cat.slug || toSlug(cat.name || cat.title);
-          if (isUuid(cat.id)) {
-            const apiProds = await productService.getProducts({ categoryId: cat.id });
-            if (apiProds && apiProds.length > 0) {
-              tempProducts[cat.id] = apiProds;
-            } else {
-              const mockFiltered = MOCK_PRODUCTS.filter(
-                p => String(p.category) === String(cat.id) || 
-                     String(p.category) === catSlug ||
-                     (catSlug === 'balo' && String(p.category) === 'tui-xach')
-              );
-              tempProducts[cat.id] = mockFiltered;
+          
+          // Tìm các danh mục con của danh mục cha này
+          const childCategories = allCategories.filter(
+            c => c.parentId === cat.id || c.parent_id === cat.id
+          );
+          
+          // Tập hợp tất cả Category ID cần truy vấn (cha + các con)
+          const categoryIds = [cat.id, ...childCategories.map(c => c.id)];
+          
+          let apiProductsMerged = [];
+          for (const id of categoryIds) {
+            if (isUuid(id)) {
+              const apiProds = await productService.getProducts({ categoryId: id });
+              if (apiProds && apiProds.length > 0) {
+                apiProductsMerged = [...apiProductsMerged, ...apiProds];
+              }
             }
+          }
+
+          // Loại bỏ sản phẩm trùng lặp nếu có
+          const uniqueProducts = [];
+          const seenIds = new Set();
+          for (const p of apiProductsMerged) {
+            const pId = p.id || p.Id;
+            if (!seenIds.has(pId)) {
+              seenIds.add(pId);
+              uniqueProducts.push(p);
+            }
+          }
+
+          if (uniqueProducts.length > 0) {
+            tempProducts[cat.id] = uniqueProducts;
           } else {
-            // Không phải UUID -> Lọc từ mock data
+            // Không có sản phẩm thực tế từ API -> Lọc từ mock data làm fallback
             const mockFiltered = MOCK_PRODUCTS.filter(
               p => String(p.category) === String(cat.id) || 
                    String(p.category) === catSlug ||
+                   childCategories.some(child => {
+                     const childSlug = child.slug || toSlug(child.name || child.title);
+                     return String(p.category) === String(child.id) || String(p.category) === childSlug;
+                   }) ||
                    (catSlug === 'balo' && String(p.category) === 'tui-xach')
             );
             tempProducts[cat.id] = mockFiltered;

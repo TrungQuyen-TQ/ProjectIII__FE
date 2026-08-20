@@ -129,9 +129,17 @@ export default function CategoryPage() {
             try {
                 const mainCategorySlug = slug[0];
                 const targetCategoryId = appliedFilters.selectedSubId || mainCategorySlug;
+                const searchParam = router.query.Search;
 
                 let apiProducts = [];
-                if (isUuid(targetCategoryId)) {
+                if (mainCategorySlug === 'search' || searchParam) {
+                    const params = {};
+                    if (searchParam) params.Search = searchParam;
+                    if (appliedFilters.minPrice) params.minPrice = parseFloat(appliedFilters.minPrice);
+                    if (appliedFilters.maxPrice) params.maxPrice = parseFloat(appliedFilters.maxPrice);
+
+                    apiProducts = await productService.getProducts(params);
+                } else if (isUuid(targetCategoryId)) {
                     // Check if this is the parent category and has subcategories
                     const currentCat = categories.find(cat => String(cat.id) === String(targetCategoryId));
                     const subItems = currentCat ? (currentCat.subItems || []) : [];
@@ -179,6 +187,11 @@ export default function CategoryPage() {
                         if (appliedFilters.minPrice && price < parseFloat(appliedFilters.minPrice)) return false;
                         if (appliedFilters.maxPrice && price > parseFloat(appliedFilters.maxPrice)) return false;
 
+                        if (searchParam) {
+                            const term = String(searchParam).toLowerCase();
+                            return String(p.title || p.name || '').toLowerCase().includes(term);
+                        }
+
                         if (appliedFilters.selectedSubId) {
                             return String(p.subCategory) === String(appliedFilters.selectedSubId);
                         }
@@ -187,14 +200,14 @@ export default function CategoryPage() {
                     setProducts(mockFiltered);
                 }
             } catch (err) {
-                console.error("Lỗi khi tải sản phẩm theo danh mục:", err);
+                console.error("Lỗi khi tải sản phẩm theo danh mục/tìm kiếm:", err);
                 setProducts([]);
             } finally {
                 setLoading(false);
             }
         };
         fetchCategoryProducts();
-    }, [slug, appliedFilters, categories]);
+    }, [slug, appliedFilters, categories, router.query.Search]);
 
     if (!slug) return null;
 
@@ -202,7 +215,7 @@ export default function CategoryPage() {
     const subCategorySlug = slug[1];
 
     const mainCategory = categories.find(cat => String(cat.id) === String(mainCategorySlug));
-    const mainCategoryName = mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm';
+    const mainCategoryName = mainCategorySlug === 'search' ? `Tìm kiếm: "${router.query.Search || ''}"` : (mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm');
     const subItemsListRaw = mainCategory ? (mainCategory.subItems || []) : [];
 
     const subCategory = subItemsListRaw.find(sub => String(sub.id) === String(appliedFilters.selectedSubId || subCategorySlug));
