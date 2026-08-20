@@ -248,15 +248,7 @@ export default function TrackingPage() {
                                     />
                                 </Box>
 
-                                {/* DEBUG BOX HỒ SƠ TRẢ VỀ CỦA API */}
-                                <Box sx={{ mt: 4, p: 3, bgcolor: '#ffffff', borderRadius: '16px', border: '1px solid #e0eaf5', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 2 }}>
-                                        🔧 DỮ LIỆU THỰC TẾ API TRẢ VỀ (DEBUG)
-                                    </Typography>
-                                    <Box component="pre" sx={{ m: 0, p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #eef2f6', overflowX: 'auto', fontSize: '12px', fontFamily: 'monospace' }}>
-                                        {JSON.stringify({ orders, selectedOrderDetails }, null, 2)}
-                                    </Box>
-                                </Box>
+
                             </Box>
                         )}
 
