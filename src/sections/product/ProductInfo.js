@@ -198,26 +198,28 @@ export default function ProductInfo({
           <Box sx={{ bgcolor: '#f8f9fa', borderRadius: '12px', p: 2, mb: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f0f0f0' }}>
             <Box component="img" src={getProductImageUrl(activeThumb) || displayImage} sx={{ width: '100%', maxHeight: { xs: 300, md: 450 }, objectFit: 'contain' }} />
           </Box>
-          <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 1 }}>
-            {displayThumbnails.map((thumb, idx) => (
-              <Box
-                key={idx}
-                onClick={() => setActiveThumb(thumb)}
-                sx={{
-                  width: 70, height: 70,
-                  borderRadius: '6px',
-                  border: getProductImageUrl(activeThumb || displayImage) === thumb ? '2px solid #2962ff' : '1.5px solid #e0e0e0',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: '0.2s',
-                  '&:hover': { borderColor: '#2962ff' }
-                }}
-              >
-                <Box component="img" src={thumb} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </Box>
-            ))}
-          </Stack>
+          {displayThumbnails.length > 1 && (
+            <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 1 }}>
+              {displayThumbnails.map((thumb, idx) => (
+                <Box
+                  key={idx}
+                  onClick={() => setActiveThumb(thumb)}
+                  sx={{
+                    width: 70, height: 70,
+                    borderRadius: '6px',
+                    border: getProductImageUrl(activeThumb || displayImage) === thumb ? '2px solid #2962ff' : '1.5px solid #e0e0e0',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: '0.2s',
+                    '&:hover': { borderColor: '#2962ff' }
+                  }}
+                >
+                  <Box component="img" src={thumb} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </Box>
+              ))}
+            </Stack>
+          )}
         </Box>
 
         {/* CỘT PHẢI: THÔNG TIN CHI TIẾT */}

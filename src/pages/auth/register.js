@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const dispatch = useDispatch();
   const router = useRouter();
@@ -45,32 +46,77 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+    setErrors({});
 
-    if (!lastName || !firstName || !email || !password || !confirmPassword || !phone) {
-      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+    // 1. Chuẩn hóa dữ liệu trước khi validate (Xóa khoảng trắng thừa)
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().replace(/\s+/g, '');
+    const cleanFirstName = firstName.trim();
+    const cleanLastName = lastName.trim();
+    const cleanMiddleName = middleName ? middleName.trim() : '';
+
+    // 2. Kiểm tra các trường bắt buộc
+    const newErrors = {};
+    if (!cleanLastName) newErrors.lastName = true;
+    if (!cleanFirstName) newErrors.firstName = true;
+    if (!cleanEmail) newErrors.email = true;
+    if (!password) newErrors.password = true;
+    if (!confirmPassword) newErrors.confirmPassword = true;
+    if (!cleanPhone) newErrors.phone = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       return;
     }
 
+    // 3. Validate Email (Ràng buộc chặt chẽ phần đuôi tên miền từ 2-6 ký tự)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setErrors({ email: true });
+      setErrorMsg('Email không hợp lệ. Vui lòng nhập đúng định dạng email (VD: example@domain.com).');
+      return;
+    }
+
+    // 3.1 Bắt buộc sử dụng email đuôi @gmail.com
+    if (!cleanEmail.endsWith('@gmail.com')) {
+      setErrors({ email: true });
+      setErrorMsg('Hệ thống chỉ hỗ trợ đăng ký bằng tài khoản Gmail (đuôi @gmail.com).');
+      return;
+    }
+
+    // 4. Validate Số điện thoại (10 chữ số chuẩn Việt Nam, không có dấu | lỗi)
+    const phoneRegex = /^0[35789]\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      setErrors({ phone: true });
+      setErrorMsg('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại gồm 10 chữ số (bắt đầu bằng 03, 05, 07, 08 hoặc 09).');
+      return;
+    }
+
+    // 5. Kiểm tra mật khẩu trùng khớp
     if (password !== confirmPassword) {
-      toast.error('Mật khẩu nhập lại không khớp.');
+      setErrors({ password: true, confirmPassword: true });
       setErrorMsg('Mật khẩu nhập lại không khớp.');
       return;
     }
 
+    // 6. Tiến hành gửi dữ liệu lên server
     try {
       setLoading(true);
-      console.log('register.js: Dispatching registerUser with:', { Email: email, Password: password, FirstName: firstName, MiddleName: middleName, LastName: lastName, Phone: phone, RoleId: 2 });
-      const actionResult = await dispatch(registerUser({ 
-        Email: email, 
-        Password: password, 
-        FirstName: firstName.trim(), 
-        MiddleName: middleName.trim(), 
-        LastName: lastName.trim(),
-        Phone: phone.trim(),
+      console.log('register.js: Dispatching registerUser with:', { Email: cleanEmail, Password: password, FirstName: cleanFirstName, MiddleName: cleanMiddleName, LastName: cleanLastName, Phone: cleanPhone, RoleId: 2 });
+
+      const actionResult = await dispatch(registerUser({
+        Email: cleanEmail,
+        Password: password,
+        FirstName: cleanFirstName,
+        MiddleName: cleanMiddleName,
+        LastName: cleanLastName,
+        Phone: cleanPhone,
         RoleId: 2
       }));
+
       console.log('register.js: registerUser result:', actionResult);
+
       if (registerUser.fulfilled.match(actionResult)) {
         toast.success('Đăng ký tài khoản thành công!');
         setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng sang trang đăng nhập...');
@@ -90,6 +136,7 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <>
@@ -126,6 +173,7 @@ export default function RegisterPage() {
                           variant="outlined"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
+                          error={!!errors.lastName}
                           sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         />
                       </Grid>
@@ -150,6 +198,7 @@ export default function RegisterPage() {
                           variant="outlined"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
+                          error={!!errors.firstName}
                           sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         />
                       </Grid>
@@ -161,23 +210,26 @@ export default function RegisterPage() {
                           variant="outlined"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
+                          error={!!errors.phone}
                           sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         />
                       </Grid>
 
-                      {/* Dòng 3: Email */}
-                      <Grid item xs={12}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
-                        <TextField
-                          fullWidth
-                          placeholder="Email *"
-                          variant="outlined"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                        />
-                      </Grid>
                     </Grid>
+
+                    {/* Dòng 3: Email */}
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập Email của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="Email *"
+                        variant="outlined"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        error={!!errors.email}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                      />
+                    </Box>
 
                     <Box sx={{ mt: 3 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Nhập mật khẩu của bạn <span style={{ color: 'red', fontWeight: 700 }}>*</span></Typography>
@@ -188,6 +240,7 @@ export default function RegisterPage() {
                         variant="outlined"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        error={!!errors.password}
                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         slotProps={{
                           input: {
@@ -216,6 +269,7 @@ export default function RegisterPage() {
                         variant="outlined"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
+                        error={!!errors.confirmPassword}
                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                         slotProps={{
                           input: {

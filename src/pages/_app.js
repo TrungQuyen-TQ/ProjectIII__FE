@@ -31,14 +31,14 @@ function MyApp({ Component, pageProps }) {
             fontFamily: '"Inter", "Roboto", sans-serif'
           },
           success: {
-            duration: 3000,
+            duration: 1000,
             style: {
               background: '#f0fdf4',
               border: '1.5px solid #4ade80',
             }
           },
           error: {
-            duration: 4000,
+            duration: 1000,
             style: {
               background: '#fef2f2',
               border: '1.5px solid #fca5a5',

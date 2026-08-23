@@ -57,7 +57,7 @@ export default function CouponSlider() {
             </div>
         ), {
             position: 'top-right',
-            duration: 3500
+            duration: 1000
         });
     };
 

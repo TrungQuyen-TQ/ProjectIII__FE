@@ -177,7 +177,7 @@ export default function Header() {
         </Box>
       </Box>
     ), {
-      duration: 6000,
+      duration: 1000,
       position: 'top-center',
       style: {
         borderRadius: '16px',
