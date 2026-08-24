@@ -119,7 +119,7 @@ export default function ProfilePage() {
                                      </div>
                                  ), {
                                      position: 'top-right',
-                                     duration: 3000
+                                     duration: 1000
                                  });
                             }}
                             sx={{ 
@@ -183,7 +183,7 @@ export default function ProfilePage() {
     // Danh sách Menu dọc bên trái
     const menuItems = [
         { id: 'info', label: 'Thông tin tài khoản', icon: <PersonIcon fontSize="small" /> },
-        { id: 'address', label: `Sổ địa chỉ (${addressCount})`, icon: <LocationOnIcon fontSize="small" /> },
+        { id: 'address', label: 'Sổ địa chỉ', icon: <LocationOnIcon fontSize="small" /> },
         { id: 'orders', label: 'Danh sách đơn hàng', icon: <ShoppingBagIcon fontSize="small" /> }
     ];
 

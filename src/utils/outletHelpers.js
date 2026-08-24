@@ -92,40 +92,70 @@ export function getOutletCategorySections(products = [], categories = []) {
         discountPercent,
       };
     })
-    .filter((p) => p.discountPercent > 0 || p.originalPrice > p.price);
+    .filter((p) => p.discountPercent > 25);
 
-  // 2. Gom nhóm sản phẩm và gán ảnh banner tương ứng
-  const sections = TARGET_CATEGORIES.map((targetCat) => {
+  // 2. Gom nhóm sản phẩm theo các danh mục từ API
+  const rootCategories = categories.filter(c => !c.parentId && !c.parent_id);
+
+  const ICON_MAP = {
+    'qua-luu-niem': '🎁',
+    'thiep-chuc-mung': '💌',
+    'bup-be': '🎎',
+    'van-phong-pham': '📁',
+    'cap-tai-lieu': '📁',
+    'balo': '🎒',
+    'tui-xach': '👜',
+    'my-pham': '💄'
+  };
+
+  const BANNER_MAP = {
+    'qua-luu-niem': '/banner/bannerluuniem.avif',
+    'thiep-chuc-mung': '/banner/bannerthiepchucmung.avif',
+    'bup-be': '/banner/bannerbupbe.avif',
+    'van-phong-pham': '/banner/bannercaptailieu.avif',
+    'cap-tai-lieu': '/banner/bannercaptailieu.avif',
+    'balo': '/banner/bannertuixach.avif',
+    'tui-xach': '/banner/bannertuixach.avif',
+    'my-pham': '/banner/bannerdolamdep.avif'
+  };
+
+  const getSlug = (cat) => {
+    if (cat.slug) return cat.slug;
+    const name = (cat.name || cat.title || '').toLowerCase();
+    if (name.includes('lưu niệm')) return 'qua-luu-niem';
+    if (name.includes('thiệp')) return 'thiep-chuc-mung';
+    if (name.includes('búp bê')) return 'bup-be';
+    if (name.includes('văn phòng') || name.includes('tài liệu') || name.includes('cặp')) return 'van-phong-pham';
+    if (name.includes('túi') || name.includes('balo')) return 'balo';
+    if (name.includes('mỹ phẩm') || name.includes('làm đẹp')) return 'my-pham';
+    return cat.id;
+  };
+
+  const sections = rootCategories.map((cat) => {
+    const catSlug = getSlug(cat);
+    const icon = ICON_MAP[catSlug] || '📁';
+    const bannerImage = BANNER_MAP[catSlug] || null;
+
+    // Tìm các danh mục con
+    const childIds = categories.filter(c => c.parentId === cat.id || c.parent_id === cat.id).map(c => c.id);
+    const categoryIds = [cat.id, ...childIds];
+
     const matchedProducts = discountedProducts
-      .filter((p) => {
-        const catId = p.categoryId;
-        const catSlugStr = String(p.category || p.categorySlug || '').toLowerCase();
-        const prodNameStr = String(p.name || '').toLowerCase();
-
-        const matchById =
-          targetCat.categoryIds.includes(catId) ||
-          targetCat.categoryIds.includes(String(catId));
-        const matchByKeyword = targetCat.keywords.some(
-          (kw) =>
-            catSlugStr.includes(String(kw).toLowerCase()) ||
-            prodNameStr.includes(String(kw).toLowerCase())
-        );
-
-        return matchById || matchByKeyword;
-      })
+      .filter((p) => categoryIds.includes(p.categoryId) || categoryIds.includes(String(p.categoryId)))
       .sort((a, b) => b.discountPercent - a.discountPercent);
 
     return {
-      id: targetCat.id,
-      name: targetCat.name,
-      icon: targetCat.icon,
-      bannerImage: targetCat.bannerImage,
-      bannerTitle: `${targetCat.icon} ${targetCat.name.toUpperCase()} - GIÁ HỜI`,
+      id: cat.id,
+      slug: catSlug,
+      name: cat.name || cat.title,
+      icon,
+      bannerImage,
+      bannerTitle: `${icon} ${(cat.name || cat.title).toUpperCase()} - GIÁ HỜI`,
       products: matchedProducts,
     };
   }).filter((section) => section.products.length > 0);
 
-  // 3. Ưu tiên gian hàng có sản phẩm giảm giá cao nhất lên đầu
+  // 3. Sắp xếp danh mục theo mức giảm giá cao nhất
   sections.sort((a, b) => {
     const maxDiscountA = a.products[0]?.discountPercent || 0;
     const maxDiscountB = b.products[0]?.discountPercent || 0;
