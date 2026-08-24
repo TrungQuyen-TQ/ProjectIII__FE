@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Stepper, Step, StepLabel, Divider, Grid, Stack, Avatar, Chip, CircularProgress, Button, Rating, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -8,6 +8,38 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import toast from 'react-hot-toast';
 import feedbackService from '../../services/feedbackService';
+import productService from '../../services/productService';
+import { getProductImageUrl } from '../../utils/imageHelper';
+
+function OrderItemAvatar({ productId }) {
+    const [imageUrl, setImageUrl] = useState('/images/placeholder.png');
+
+    useEffect(() => {
+        const fetchProductImage = async () => {
+            if (!productId) return;
+            try {
+                const productDetail = await productService.getProductById(productId);
+                if (productDetail) {
+                    const img = productDetail.thumbnail || productDetail.Thumbnail || productDetail.image || productDetail.images?.[0];
+                    if (img) {
+                        setImageUrl(getProductImageUrl(img));
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải ảnh sản phẩm đơn hàng:", err);
+            }
+        };
+        fetchProductImage();
+    }, [productId]);
+
+    return (
+        <Avatar
+            variant="rounded"
+            src={imageUrl}
+            sx={{ width: 48, height: 48, border: '1px solid #eee' }}
+        />
+    );
+}
 
 export default function OrderDetailSection({ selectedOrder, loadingDetails, COLORS, getStatusLabel, trackingSteps, onCancelOrder }) {
     const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -236,11 +268,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Stack spacing={2} sx={{ maxHeight: 220, overflowY: 'auto', pr: 1 }}>
                                 {(selectedOrder.items || selectedOrder.orderDetails || []).map((item, idx) => (
                                     <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#ffffff', p: 1.5, borderRadius: '8px', border: '1px solid #eef2f6', flexWrap: 'wrap' }}>
-                                        <Avatar
-                                            variant="rounded"
-                                            src={item.product?.imageUrl || '/images/placeholder.png'}
-                                            sx={{ width: 48, height: 48, border: '1px solid #eee' }}
-                                        />
+                                        <OrderItemAvatar productId={item.productId} />
                                         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {item.productName || item.product?.name || 'Sản phẩm'}
