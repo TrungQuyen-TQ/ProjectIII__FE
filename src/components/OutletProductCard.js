@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, Box, Typography, Button, Rating } from '@mui/material';
+import { getProductImageUrl } from '../utils/imageHelper';
+import Link from 'next/link';
 
 function safeNumber(val) {
   if (typeof val === 'number') return val;
@@ -12,6 +14,8 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
     id = 1,
     name = 'Sản phẩm Outlet',
     image,
+    thumbnail,
+    Thumbnail,
     discountPercent = 0,
     rating = 5,
   } = product;
@@ -44,51 +48,54 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
       }}
     >
       {/* Khối Hình ảnh & Huy hiệu Đã bán */}
-      <Box sx={{ p: 1.5, pb: 0 }}>
-        <Box
-          sx={{
-            width: '100%',
-            height: 190,
-            borderRadius: 2,
-            overflow: 'hidden',
-            bgcolor: '#f8f9fc',
-            position: 'relative',
-          }}
-        >
+      <Link href={`/product/${id}`} style={{ textDecoration: 'none' }}>
+        <Box sx={{ p: 1.5, pb: 0 }}>
           <Box
-            component="img"
-            className="product-img"
-            src={image || '/banner/bannerbupbe.avif'}
-            alt={name}
             sx={{
               width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'transform 0.3s ease',
-              display: 'block',
-            }}
-          />
-
-          {/* Huy hiệu Đã bán */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 8,
-              left: 8,
-              bgcolor: 'rgba(255, 255, 255, 0.92)',
-              color: '#0066cc',
-              fontSize: '11px',
-              fontWeight: 700,
-              px: 1,
-              py: 0.3,
-              borderRadius: 5,
-              border: '1px solid #d6e8fa',
+              height: 190,
+              borderRadius: 2,
+              overflow: 'hidden',
+              bgcolor: '#f8f9fc',
+              position: 'relative',
+              cursor: 'pointer'
             }}
           >
-            🔥 Đã bán {soldCount}
+            <Box
+              component="img"
+              className="product-img"
+              src={getProductImageUrl(image || thumbnail || Thumbnail)}
+              alt={name}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s ease',
+                display: 'block',
+              }}
+            />
+
+            {/* Huy hiệu Đã bán */}
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 8,
+                left: 8,
+                bgcolor: 'rgba(255, 255, 255, 0.92)',
+                color: '#0066cc',
+                fontSize: '11px',
+                fontWeight: 700,
+                px: 1,
+                py: 0.3,
+                borderRadius: 5,
+                border: '1px solid #d6e8fa',
+              }}
+            >
+              🔥 Đã bán {soldCount}
+            </Box>
           </Box>
         </Box>
-      </Box>
+      </Link>
 
       {/* Thông tin sản phẩm */}
       <Box
@@ -120,28 +127,32 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
           </Box>
 
           {/* Tên sản phẩm */}
-          <Typography
-            variant="subtitle2"
-            title={name}
-            sx={{
-              fontWeight: 600,
-              color: '#2b303a',
-              mb: 0.8,
-              lineHeight: 1.4,
-              height: 40,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {name}
-          </Typography>
+          <Link href={`/product/${id}`} style={{ textDecoration: 'none' }}>
+            <Typography
+              variant="subtitle2"
+              title={name}
+              sx={{
+                fontWeight: 600,
+                color: '#2b303a',
+                mb: 0.8,
+                lineHeight: 1.4,
+                height: 40,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                cursor: 'pointer',
+                '&:hover': { color: '#0066cc' }
+              }}
+            >
+              {name}
+            </Typography>
+          </Link>
 
           {/* Đánh giá sao chuẩn MUI */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Rating
-              value={Number(rating) || 5}
+              value={Number(product.rating || product.Rating || rating || 5)}
               readOnly
               size="small"
               sx={{ color: '#ffb800', fontSize: '1rem' }}
@@ -150,7 +161,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
               component="span"
               sx={{ color: '#888', fontSize: '12px', ml: 0.5 }}
             >
-              ({rating * 5})
+              ({product.ratingCount !== undefined ? product.ratingCount : (product.RatingCount !== undefined ? product.RatingCount : (product.reviews || 0))})
             </Typography>
           </Box>
         </Box>
@@ -166,7 +177,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
                 lineHeight: 1.2,
               }}
             >
-              {price.toLocaleString('vi-VN')}đ
+              {price.toLocaleString('vi-VN')} VNĐ
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3 }}>
@@ -177,7 +188,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
                   textDecoration: 'line-through',
                 }}
               >
-                {originalPrice.toLocaleString('vi-VN')}đ
+                {originalPrice.toLocaleString('vi-VN')} VNĐ
               </Typography>
               <Box
                 component="span"

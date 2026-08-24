@@ -1,33 +1,60 @@
 // src/pages/khuyen-mai.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   Typography,
   Button,
   Stack,
-  Chip
+  Chip,
+  CircularProgress
 } from '@mui/material';
 
 import MainLayout from '../layouts/MainLayout';
 import OutletProductCard from '../components/OutletProductCard';
 import QuickViewDialog from '../components/QuickViewDialog';
+import Slider from 'react-slick';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import { IconButton } from '@mui/material';
+
 import {
-  getOutletCategorySections,
-  TARGET_CATEGORIES,
+  getOutletCategorySections
 } from '../utils/outletHelpers';
 
+// IMPORT SERVICE MỚI
+import productService from '../services/productService';
+import categoryService from '../services/categoryService';
+
+// Dữ liệu mẫu (Backup)
 import { dataProducts as productsData } from '../data/dataProducts';
 import { dataCategories as categoriesData } from '../data/dataCategories';
 
+// --- MŨI TÊN SLIDER ---
+const ProductPrevArrow = ({ onClick }) => (
+  <IconButton onClick={onClick} sx={{ position: 'absolute', top: '40%', left: -20, transform: 'translateY(-50%)', zIndex: 2, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', width: 40, height: 40, '&:hover': { bgcolor: '#f5f5f5' }, display: { xs: 'none', md: 'flex' } }}>
+    <ArrowBackIosNewIcon sx={{ fontSize: 18, color: '#17479d' }} />
+  </IconButton>
+);
+
+const ProductNextArrow = ({ onClick }) => (
+  <IconButton onClick={onClick} sx={{ position: 'absolute', top: '40%', right: -20, transform: 'translateY(-50%)', zIndex: 2, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', width: 40, height: 40, '&:hover': { bgcolor: '#f5f5f5' }, display: { xs: 'none', md: 'flex' } }}>
+    <ArrowForwardIosIcon sx={{ fontSize: 18, color: '#17479d' }} />
+  </IconButton>
+);
+
+const sliderSettings = {
+  dots: false, infinite: false, speed: 500, slidesToShow: 4, slidesToScroll: 2,
+  prevArrow: <ProductPrevArrow />, nextArrow: <ProductNextArrow />,
+  responsive: [
+    { breakpoint: 1200, settings: { slidesToShow: 4 } },
+    { breakpoint: 900, settings: { slidesToShow: 3 } },
+    { breakpoint: 600, settings: { slidesToShow: 2, arrows: false } },
+  ]
+};
 
 // ================= COMPONENT: GIAN HÀNG & NÚT XEM THÊM =================
 function CategorySectionBlock({ section, onQuickView, onResetTab }) {
-  const [visibleCount, setVisibleCount] = useState(4);
-  const hasMore = section.products.length > visibleCount;
-
-  const handleLoadMore = () => setVisibleCount((prev) => prev + 4);
-
   return (
     <Box
       sx={{
@@ -55,33 +82,16 @@ function CategorySectionBlock({ section, onQuickView, onResetTab }) {
         </Stack>
       </Box>
 
-      {/* SỬ DỤNG CSS GRID ĐỂ ÉP CÁC THẺ SẢN PHẨM CÂN BẰNG HOÀN HẢO */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(1, 1fr)', // Mobile: 1 cột
-            sm: 'repeat(2, 1fr)', // Tablet: 2 cột
-            md: 'repeat(3, 1fr)', // Màn hình nhỏ: 3 cột
-            lg: 'repeat(4, 1fr)', // Màn hình chuẩn: ÉP ĐÚNG 4 CỘT CHIA ĐỀU 100%
-          },
-          gap: 2.5,
-        }}
-      >
-        {section.products.slice(0, visibleCount).map((product) => (
-          <Box key={product.id} sx={{ height: '100%' }}>
-            <OutletProductCard product={product} onQuickView={onQuickView} />
-          </Box>
-        ))}
+      {/* LƯỚI SẢN PHẨM TRƯỢT NGANG */}
+      <Box sx={{ mx: { xs: -1, md: -1.5 }, position: 'relative' }}>
+        <Slider {...sliderSettings}>
+          {section.products.map((product) => (
+            <Box key={product.id} sx={{ px: { xs: 1, md: 1.5 }, pb: 2, pt: 1, height: '100%' }}>
+              <OutletProductCard product={product} onQuickView={onQuickView} />
+            </Box>
+          ))}
+        </Slider>
       </Box>
-
-      {hasMore && (
-        <Box sx={{ textAlign: 'center', mt: 3.5, pt: 1 }}>
-          <Button variant="contained" onClick={handleLoadMore} sx={{ bgcolor: '#ff1a3c', color: '#ffffff', fontWeight: 700, fontSize: '14px', textTransform: 'none', px: 4, py: 1.2, borderRadius: 2, '&:hover': { bgcolor: '#e01030' } }}>
-            Xem thêm ({section.products.length - visibleCount} sản phẩm)
-          </Button>
-        </Box>
-      )}
     </Box>
   );
 }
@@ -92,7 +102,96 @@ export default function OutletPage() {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('ALL');
 
-  const outletSections = getOutletCategorySections(productsData, categoriesData);
+  const [categories, setCategories] = useState([]);
+  const [outletSections, setOutletSections] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // SỬ DỤNG SERVICE ĐỂ GỌI API
+  useEffect(() => {
+    const isUuid = (str) => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    };
+
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        // 1. Tải danh mục từ API
+        const categoryList = await categoryService.getCategories();
+        let catData = [];
+        if (categoryList && categoryList.length > 0) {
+          catData = categoryList;
+        } else {
+          catData = categoriesData;
+        }
+        setCategories(catData);
+
+        // Lấy danh mục cha (parentId = null)
+        const rootCats = catData.filter(c => !c.parentId && !c.parent_id);
+
+        // 2. Tải sản phẩm cho từng danh mục cha từ API qua categoryId
+        const allFetchedProducts = [];
+
+        for (const cat of rootCats) {
+          // Tìm các danh mục con
+          const childCategories = catData.filter(
+            c => c.parentId === cat.id || c.parent_id === cat.id
+          );
+          const categoryIds = [cat.id, ...childCategories.map(c => c.id)];
+
+          let apiProductsMerged = [];
+          for (const id of categoryIds) {
+            if (isUuid(id)) {
+              // Gọi API lấy sản phẩm theo CategoryId
+              const apiProds = await productService.getProducts({ categoryId: id });
+              if (apiProds && apiProds.length > 0) {
+                // Đảm bảo gán categoryId cho sản phẩm nếu chưa có
+                const mapped = apiProds.map(p => ({ ...p, categoryId: id }));
+                apiProductsMerged = [...apiProductsMerged, ...mapped];
+              }
+            }
+          }
+
+          // Loại bỏ sản phẩm trùng lặp
+          const uniqueProducts = [];
+          const seenIds = new Set();
+          for (const p of apiProductsMerged) {
+            const pId = p.id || p.Id;
+            if (!seenIds.has(pId)) {
+              seenIds.add(pId);
+              uniqueProducts.push(p);
+            }
+          }
+
+          if (uniqueProducts.length > 0) {
+            allFetchedProducts.push(...uniqueProducts);
+          }
+        }
+
+        // Nếu không lấy được sản phẩm nào từ API, dùng dữ liệu mẫu làm backup
+        let finalProducts = allFetchedProducts;
+        if (finalProducts.length === 0) {
+          finalProducts = productsData;
+        }
+
+        // 3. Gọi helper để xử lý lọc sản phẩm giảm giá trên 25% và gom nhóm thành các Section
+        const sections = getOutletCategorySections(finalProducts, catData);
+        setOutletSections(sections);
+
+      } catch (error) {
+        console.error("Lỗi khi kết nối Database lấy sản phẩm/danh mục:", error);
+        // Fallback dùng dữ liệu mẫu
+        const sections = getOutletCategorySections(productsData, categoriesData);
+        setOutletSections(sections);
+        setCategories(categoriesData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const displayedSections = activeTab === 'ALL' ? outletSections : outletSections.filter((sec) => sec.id === activeTab);
 
   const handleQuickView = (product) => {
@@ -102,7 +201,7 @@ export default function OutletPage() {
 
   return (
     <MainLayout title="Outlet - Xả Kho Giá Hời | Thiên Long">
-      {/* NỀN ẢNH PHÁO HOA + HIỆU ỨNG MỜ DẦN VÀO MÀU XANH ĐEN */}
+      {/* NỀN ẢNH PHÁO HOA CỐ ĐỊNH PARALLAX */}
       <Box
         sx={{
           backgroundColor: '#0f172a',
@@ -120,17 +219,15 @@ export default function OutletPage() {
       >
 
         {/* === HERO BANNER FULL ẢNH === */}
-        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e' }}>
+        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e', display: 'flex', justifyContent: 'center' }}>
           <Box
             component="img"
             src="/banner/bannermain.jpg"
             alt="ARTS Outlet Xả Kho Giá Hời"
             sx={{
               width: '100%',
+              maxWidth: '1440px',
               height: 'auto',
-              maxHeight: { xs: '300px', sm: '400px', md: '500px', lg: '600px' },
-              objectFit: 'cover',
-              objectPosition: 'center',
               display: 'block',
             }}
           />
@@ -145,40 +242,35 @@ export default function OutletPage() {
           </Box>
         </Container>
 
-        {/* === THANH LỌC DANH MỤC === */}
-        <Box sx={{ bgcolor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)', borderTop: '1px solid #e2e8f0', borderBottom: '2px solid #e2e8f0', mb: 4, position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          <Container maxWidth="lg">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1.5, overflowX: 'auto', whiteSpace: 'nowrap', '&::-webkit-scrollbar': { display: 'none' } }}>
-              <Button variant={activeTab === 'ALL' ? 'contained' : 'outlined'} onClick={() => setActiveTab('ALL')} sx={{ borderRadius: 5, textTransform: 'none', fontWeight: 600, fontSize: '14px', px: 2.2, py: 0.8, borderColor: '#e2e8f0', bgcolor: activeTab === 'ALL' ? '#1b2a4e' : '#f8fafc', color: activeTab === 'ALL' ? '#fff' : '#1e293b', '&:hover': { borderColor: '#1b2a4e', color: activeTab === 'ALL' ? '#fff' : '#1b2a4e' } }}>
-                🔥 Tất cả gian hàng
-              </Button>
-              {TARGET_CATEGORIES.map((cat) => {
-                const isActive = activeTab === cat.id;
-                return (
-                  <Button key={cat.id} variant={isActive ? 'contained' : 'outlined'} onClick={() => setActiveTab(cat.id)} sx={{ borderRadius: 5, textTransform: 'none', fontWeight: 600, fontSize: '14px', px: 2.2, py: 0.8, borderColor: '#e2e8f0', bgcolor: isActive ? '#1b2a4e' : '#f8fafc', color: isActive ? '#fff' : '#1e293b', '&:hover': { borderColor: '#1b2a4e', color: isActive ? '#fff' : '#1b2a4e' } }}>
-                    <span style={{ marginRight: 6 }}>{cat.icon}</span> {cat.name}
-                  </Button>
-                );
-              })}
-            </Box>
-          </Container>
-        </Box>
+
 
         {/* === CÁC GIAN HÀNG === */}
         <Container maxWidth="lg">
-          {displayedSections.map((section) => (
-            <CategorySectionBlock key={section.id} section={section} onQuickView={handleQuickView} onResetTab={() => setActiveTab('ALL')} />
-          ))}
-          {displayedSections.length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 8, bgcolor: 'rgba(255,255,255,0.95)', borderRadius: 4, color: '#666', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>Không có sản phẩm giảm giá nào thuộc mục này!</Typography>
+          {/* MÀN HÌNH LOADING */}
+          {isLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
+              <CircularProgress sx={{ color: '#ffda6a', mb: 2 }} />
+              <Typography sx={{ color: '#fff', fontWeight: 600 }}>Đang tải sản phẩm siêu sale...</Typography>
             </Box>
+          ) : (
+            <>
+              {displayedSections.map((section) => (
+                <CategorySectionBlock key={section.id} section={section} onQuickView={handleQuickView} onResetTab={() => setActiveTab('ALL')} />
+              ))}
+
+              {/* NẾU RỖNG SẢN PHẨM */}
+              {displayedSections.length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 8, bgcolor: 'rgba(255,255,255,0.95)', borderRadius: 4, color: '#666', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>Chưa có sản phẩm giảm giá nào trong gian hàng này!</Typography>
+                </Box>
+              )}
+            </>
           )}
         </Container>
 
         {/* === MODAL XEM NHANH === */}
         {isQuickViewOpen && selectedProduct && (
-          <QuickViewDialog product={selectedProduct} isOpen={isQuickViewOpen} onClose={() => setIsQuickViewOpen(false)} />
+          <QuickViewDialog product={selectedProduct} open={isQuickViewOpen} onClose={() => setIsQuickViewOpen(false)} />
         )}
       </Box>
     </MainLayout>

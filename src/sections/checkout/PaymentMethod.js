@@ -42,9 +42,7 @@ export default function PaymentMethod({ paymentMethod, setPaymentMethod, payment
                                     control={<Radio color="primary" />}
                                     label={
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            {method.logo && (
-                                                <Box component="img" src={method.logo} sx={{ width: 40, height: 40, objectFit: 'contain' }} />
-                                            )}
+
                                             <Box>
                                                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{method.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{method.description}</Typography>

@@ -1,9 +1,10 @@
 // src/pages/tracking.js
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logoutUser } from '../redux/slices/authSlice';
 import { useRouter } from 'next/router';
-import { Box, Container, Typography, Button, CircularProgress, Paper } from '@mui/material';
+import { Box, Container, Typography, Button, CircularProgress, Paper, Tabs, Tab } from '@mui/material';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 
 import MainLayout from '../layouts/MainLayout';
@@ -25,20 +26,40 @@ const COLORS = {
 };
 
 const trackingSteps = [
-    'Chờ xác nhận',
-    'Đã xác nhận',
-    'Đang giao hàng',
-    'Giao thành công'
+    'Mới',
+    'Đang xử lý',
+    'Hoàn thành'
 ];
 
 export default function TrackingPage() {
     const router = useRouter();
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
+
+    const handleStatusTabChange = (status) => {
+        setSelectedStatusTab(status);
+        const filtered = orders.filter(order => {
+            if (status === 'ALL') return true;
+            return order.orderStatusName === status;
+        });
+        if (filtered.length > 0) {
+            setSelectedOrderId(filtered[0].id || filtered[0].Id);
+        } else {
+            setSelectedOrderId(null);
+        }
+    };
+
+    const filteredOrders = orders.filter(order => {
+        if (selectedStatusTab === 'ALL') return true;
+        return order.orderStatusName === selectedStatusTab;
+    });
 
     useEffect(() => {
         if (!user) {
@@ -64,6 +85,11 @@ export default function TrackingPage() {
                 }
             } catch (err) {
                 console.error("Lỗi khi tải đơn hàng của tôi:", err);
+                if (err.response?.status === 401) {
+                    toast.error("Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại!");
+                    dispatch(logoutUser());
+                    router.push('/auth/login?redirect=/tracking');
+                }
             } finally {
                 setLoading(false);
             }
@@ -94,53 +120,123 @@ export default function TrackingPage() {
         fetchOrderDetails();
     }, [selectedOrderId]);
 
-    const handleCancelOrder = async () => {
+    const handleCancelOrder = () => {
         if (!selectedOrderId) return;
-        if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
 
-        try {
-            const loadingToast = toast.loading("Đang tiến hành hủy đơn hàng...");
-            await orderService.cancelOrder(selectedOrderId);
-            toast.dismiss(loadingToast);
-            toast.success("Hủy đơn hàng thành công!");
+        toast((t) => (
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, p: 0.5, minWidth: 280 }}>
+                <Box sx={{
+                    bgcolor: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    borderRadius: '50%',
+                    p: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                }}>
+                    <ShoppingBagIcon sx={{ fontSize: 20 }} />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5, lineHeight: 1.2 }}>
+                            Xác nhận hủy đơn hàng
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                            Bạn có chắc chắn muốn hủy đơn hàng này không?
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
+                            size="small"
+                            variant="text"
+                            onClick={() => toast.dismiss(t.id)}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                color: '#64748b',
+                                borderRadius: '8px',
+                                px: 2,
+                                '&:hover': { bgcolor: '#f1f5f9' }
+                            }}
+                        >
+                            Hủy bỏ
+                        </Button>
+                        <Button
+                            size="small"
+                            variant="contained"
+                            onClick={async () => {
+                                toast.dismiss(t.id);
+                                try {
+                                    const loadingToast = toast.loading("Đang tiến hành hủy đơn hàng...");
+                                    await orderService.cancelOrder(selectedOrderId);
+                                    toast.dismiss(loadingToast);
+                                    toast.success("Hủy đơn hàng thành công!");
 
-            // Reload order list
-            const data = await orderService.getMyOrders();
-            const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
-            const sortedOrders = fetchedOrders.sort((a, b) => {
-                const dateA = new Date(a.createdAt || a.CreatedAt || 0);
-                const dateB = new Date(b.createdAt || b.CreatedAt || 0);
-                return dateB - dateA;
-            });
-            setOrders(sortedOrders);
+                                    // Reload order list
+                                    const data = await orderService.getMyOrders();
+                                    const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
+                                    const sortedOrders = fetchedOrders.sort((a, b) => {
+                                        const dateA = new Date(a.createdAt || a.CreatedAt || 0);
+                                        const dateB = new Date(b.createdAt || b.CreatedAt || 0);
+                                        return dateB - dateA;
+                                    });
+                                    setOrders(sortedOrders);
 
-            // Reload current details
-            const detailData = await orderService.getOrderById(selectedOrderId);
-            setSelectedOrderDetails(detailData);
-        } catch (err) {
-            toast.error(err.response?.data?.message || err.message || "Hủy đơn hàng thất bại. Vui lòng thử lại!");
-        }
+                                    // Reload current details
+                                    const detailData = await orderService.getOrderById(selectedOrderId);
+                                    setSelectedOrderDetails(detailData);
+                                } catch (err) {
+                                    toast.error(err.response?.data?.message || err.message || "Hủy đơn hàng thất bại. Vui lòng thử lại!");
+                                }
+                            }}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                px: 2.5,
+                                bgcolor: '#ef4444',
+                                fontWeight: 600,
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }
+                            }}
+                        >
+                            Xác nhận hủy
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
+        ), {
+            duration: 8000,
+            position: 'top-center',
+            style: {
+                borderRadius: '16px',
+                background: '#ffffff',
+                color: '#1e293b',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                padding: '16px',
+                border: '1px solid #f1f5f9',
+                maxWidth: '380px'
+            }
+        });
     };
 
     const getStatusLabel = (order) => {
         if (!order) return { label: 'Không xác định', color: COLORS.textMuted, stepIndex: -1 };
-        const status = order.orderStatus;
         const label = order.orderStatusName || 'Không xác định';
         
-        switch (status) {
-            case 0:
-                return { label: label, color: COLORS.warning, stepIndex: 0 };
-            case 1:
-                return { label: label, color: COLORS.info, stepIndex: 1 };
-            case 2:
-                return { label: label, color: COLORS.activeOrange, stepIndex: 2 };
-            case 3:
-                return { label: label, color: COLORS.success, stepIndex: 3 };
-            case 4:
-                return { label: label, color: COLORS.error, stepIndex: -1 };
-            default:
-                return { label: label, color: COLORS.textMuted, stepIndex: -1 };
+        if (label === 'Mới') {
+            return { label: label, color: COLORS.warning, stepIndex: 0 };
+        } else if (label === 'Đang xử lý') {
+            return { label: label, color: COLORS.info, stepIndex: 1 };
+        } else if (label === 'Hoàn thành') {
+            return { label: label, color: COLORS.success, stepIndex: 2 };
+        } else if (label === 'Đã hủy') {
+            return { label: label, color: COLORS.error, stepIndex: -1 };
+        } else if (label === 'Trả hàng') {
+            return { label: label, color: COLORS.error, stepIndex: -1 };
         }
+        
+        return { label: label, color: COLORS.textMuted, stepIndex: -1 };
     };
 
     if (loading) {
@@ -205,11 +301,13 @@ export default function TrackingPage() {
                                     
                                     {/* CỘT TRÁI - DANH SÁCH ĐƠN HÀNG */}
                                     <OrderListSection
-                                        orders={orders}
+                                        orders={filteredOrders}
                                         selectedOrderId={selectedOrderId}
                                         setSelectedOrderId={setSelectedOrderId}
                                         COLORS={COLORS}
                                         getStatusLabel={getStatusLabel}
+                                        selectedStatusTab={selectedStatusTab}
+                                        onStatusTabChange={handleStatusTabChange}
                                     />
 
                                     {/* CỘT PHẢI - CHI TIẾT HÀNH TRÌNH ĐƠN HÀNG */}
@@ -223,15 +321,7 @@ export default function TrackingPage() {
                                     />
                                 </Box>
 
-                                {/* DEBUG BOX HỒ SƠ TRẢ VỀ CỦA API */}
-                                <Box sx={{ mt: 4, p: 3, bgcolor: '#ffffff', borderRadius: '16px', border: '1px solid #e0eaf5', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue, mb: 2 }}>
-                                        🔧 DỮ LIỆU THỰC TẾ API TRẢ VỀ (DEBUG)
-                                    </Typography>
-                                    <Box component="pre" sx={{ m: 0, p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #eef2f6', overflowX: 'auto', fontSize: '12px', fontFamily: 'monospace' }}>
-                                        {JSON.stringify({ orders, selectedOrderDetails }, null, 2)}
-                                    </Box>
-                                </Box>
+
                             </Box>
                         )}
 

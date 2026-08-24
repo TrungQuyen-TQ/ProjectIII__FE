@@ -39,51 +39,63 @@ export default function LoginPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!email || !password) {
+    // 1. Chuẩn hóa dữ liệu đầu vào (Xóa khoảng trắng và chuyển về chữ thường)
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const cleanPassword = password ? password : ''; // Mật khẩu giữ nguyên, không trim khoảng trắng vì khoảng trắng có thể là một phần của mật khẩu
+
+    // 2. Kiểm tra bỏ trống
+    if (!cleanEmail || !cleanPassword) {
       toast.error('Vui lòng nhập đầy đủ Email và Mật khẩu.');
       setErrorMsg('Vui lòng nhập đầy đủ Email và Mật khẩu.');
       return;
     }
 
+    // 3. Kiểm tra định dạng Email cơ bản để tránh gửi request rác lên server
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast.error('Định dạng Email không hợp lệ.');
+      setErrorMsg('Vui lòng nhập đúng định dạng email (VD: example@domain.com).');
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('login.js: Dispatching loginUser with:', { Email: email, Password: password });
-      const actionResult = await dispatch(loginUser({ Email: email, Password: password }));
+      console.log('login.js: Dispatching loginUser with:', { Email: cleanEmail });
+
+      // Sử dụng dữ liệu đã làm sạch để gửi lên API
+      const actionResult = await dispatch(loginUser({ Email: cleanEmail, Password: cleanPassword }));
       console.log('login.js: loginUser result:', actionResult);
+
       if (loginUser.fulfilled.match(actionResult)) {
         toast.custom((t) => (
-            <div
-                className={`${t.visible ? 'toast-custom-enter' : 'toast-custom-leave'} toast-custom-success`}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div className="toast-icon-success">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div>
-                        <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>
-                            Thông báo
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.3 }}>
-                            Đăng nhập thành công!
-                        </div>
-                    </div>
+          <div className={`${t.visible ? 'toast-custom-enter' : 'toast-custom-leave'} toast-custom-success`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div className="toast-icon-success">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>
+                  Thông báo
                 </div>
-                <button 
-                    onClick={() => toast.dismiss(t.id)}
-                    className="toast-close-btn"
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.3 }}>
+                  Đăng nhập thành công!
+                </div>
+              </div>
             </div>
+            <button onClick={() => toast.dismiss(t.id)} className="toast-close-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         ), {
-            position: 'top-right',
-            duration: 3000
+          position: 'top-right',
+          duration: 1000
         });
+
         setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
         setTimeout(() => {
           router.push('/');
@@ -101,6 +113,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <>

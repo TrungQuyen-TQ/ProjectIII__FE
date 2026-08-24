@@ -1,13 +1,96 @@
-import React from 'react';
-import { Box, Typography, Paper, Stepper, Step, StepLabel, Divider, Grid, Stack, Avatar, Chip, CircularProgress, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Paper, Stepper, Step, StepLabel, Divider, Grid, Stack, Avatar, Chip, CircularProgress, Button, Rating, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import HomeIcon from '@mui/icons-material/Home';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import toast from 'react-hot-toast';
+import feedbackService from '../../services/feedbackService';
+import productService from '../../services/productService';
+import { getProductImageUrl } from '../../utils/imageHelper';
+
+function OrderItemAvatar({ productId }) {
+    const [imageUrl, setImageUrl] = useState('/images/placeholder.png');
+
+    useEffect(() => {
+        const fetchProductImage = async () => {
+            if (!productId) return;
+            try {
+                const productDetail = await productService.getProductById(productId);
+                if (productDetail) {
+                    const img = productDetail.thumbnail || productDetail.Thumbnail || productDetail.image || productDetail.images?.[0];
+                    if (img) {
+                        setImageUrl(getProductImageUrl(img));
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải ảnh sản phẩm đơn hàng:", err);
+            }
+        };
+        fetchProductImage();
+    }, [productId]);
+
+    return (
+        <Avatar
+            variant="rounded"
+            src={imageUrl}
+            sx={{ width: 48, height: 48, border: '1px solid #eee' }}
+        />
+    );
+}
 
 export default function OrderDetailSection({ selectedOrder, loadingDetails, COLORS, getStatusLabel, trackingSteps, onCancelOrder }) {
+    const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [selectedItemForFeedback, setSelectedItemForFeedback] = useState(null);
+    const [rating, setRating] = useState(5);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+    const handleOpenFeedback = (item) => {
+        setSelectedItemForFeedback(item);
+        setRating(5);
+        setTitle('');
+        setContent('');
+        setFeedbackOpen(true);
+    };
+
+    const handleCloseFeedback = () => {
+        setFeedbackOpen(false);
+        setSelectedItemForFeedback(null);
+    };
+
+    const handleSubmitFeedback = async (e) => {
+        e.preventDefault();
+        if (!selectedItemForFeedback) return;
+
+        setSubmittingFeedback(true);
+        try {
+            const dto = {
+                productId: selectedItemForFeedback.productId,
+                orderItemId: selectedItemForFeedback.orderItemId,
+                rating: rating,
+                title: title.trim() || undefined,
+                content: content.trim() || undefined,
+                images: []
+            };
+
+            const res = await feedbackService.createFeedback(dto);
+            if (res.success) {
+                toast.success("Gửi đánh giá thành công!");
+                handleCloseFeedback();
+            } else {
+                toast.error(res.error || "Gửi đánh giá thất bại.");
+            }
+        } catch (err) {
+            toast.error("Đã xảy ra lỗi khi gửi đánh giá.");
+        } finally {
+            setSubmittingFeedback(false);
+        }
+    };
+
     if (loadingDetails) {
         return (
             <Box sx={{ flexGrow: 1, width: { xs: '100%', md: '66.667%' }, minWidth: 0 }}>
@@ -75,7 +158,8 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                     {/* STEPPER TRẠNG THÁI */}
                     {(() => {
                         const statusInfo = getStatusLabel(selectedOrder);
-                        const isCancelled = selectedOrder.orderStatus === 4 || selectedOrder.orderStatus === 'CANCELLED';
+                        const isCancelled = selectedOrder.orderStatus === 4 || selectedOrder.orderStatus === 'CANCELLED' || selectedOrder.orderStatusName === 'Đã hủy';
+                        const isReturned = selectedOrder.orderStatusName === 'Trả hàng';
 
                         if (isCancelled) {
                             return (
@@ -83,6 +167,17 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                     <CancelIcon sx={{ color: COLORS.error }} />
                                     <Typography sx={{ color: COLORS.error, fontWeight: 700 }}>
                                         Đơn hàng này đã bị hủy.
+                                    </Typography>
+                                </Box>
+                            );
+                        }
+
+                        if (isReturned) {
+                            return (
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, bgcolor: '#fdf2f2', p: 2, borderRadius: '8px', mb: 5 }}>
+                                    <CancelIcon sx={{ color: COLORS.error }} />
+                                    <Typography sx={{ color: COLORS.error, fontWeight: 700 }}>
+                                        Đơn hàng này đã được trả lại hệ thống.
                                     </Typography>
                                 </Box>
                             );
@@ -172,12 +267,8 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
 
                             <Stack spacing={2} sx={{ maxHeight: 220, overflowY: 'auto', pr: 1 }}>
                                 {(selectedOrder.items || selectedOrder.orderDetails || []).map((item, idx) => (
-                                    <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#ffffff', p: 1.5, borderRadius: '8px', border: '1px solid #eef2f6' }}>
-                                        <Avatar
-                                            variant="rounded"
-                                            src={item.product?.imageUrl || '/images/placeholder.png'}
-                                            sx={{ width: 48, height: 48, border: '1px solid #eee' }}
-                                        />
+                                    <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#ffffff', p: 1.5, borderRadius: '8px', border: '1px solid #eef2f6', flexWrap: 'wrap' }}>
+                                        <OrderItemAvatar productId={item.productId} />
                                         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {item.productName || item.product?.name || 'Sản phẩm'}
@@ -186,9 +277,35 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                                 Số lượng: {item.quantity} {item.variantName ? `| Loại: ${item.variantName}` : ''}
                                             </Typography>
                                         </Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>
-                                            {(item.unitPrice || item.price || 0).toLocaleString('vi-VN')}đ
-                                        </Typography>
+                                        <Stack direction="row" spacing={2} alignItems="center">
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>
+                                                {(item.unitPrice || item.price || 0).toLocaleString('vi-VN')} VNĐ
+                                            </Typography>
+                                            {selectedOrder.orderStatusName === 'Hoàn thành' && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    disabled={Boolean(item.isReviewed || item.IsReviewed)}
+                                                    onClick={() => handleOpenFeedback(item)}
+                                                    sx={{
+                                                        bgcolor: COLORS.activeOrange,
+                                                        color: 'white',
+                                                        textTransform: 'none',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.75rem',
+                                                        borderRadius: '6px',
+                                                        boxShadow: 'none',
+                                                        '&:hover': { bgcolor: '#e07d00', boxShadow: 'none' },
+                                                        '&.Mui-disabled': {
+                                                            bgcolor: '#e2e8f0',
+                                                            color: '#94a3b8'
+                                                        }
+                                                    }}
+                                                >
+                                                    {item.isReviewed || item.IsReviewed ? 'Đã đánh giá' : 'Đánh giá'}
+                                                </Button>
+                                            )}
+                                        </Stack>
                                     </Box>
                                 ))}
                             </Stack>
@@ -201,20 +318,20 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography variant="body2" color="text.secondary">Tổng tiền hàng:</Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                    {((selectedOrder.total || 0) - (selectedOrder.shippingFee || 0)).toLocaleString('vi-VN')}đ
+                                    {((selectedOrder.total || 0) - (selectedOrder.shippingFee || 0)).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography variant="body2" color="text.secondary">Phí vận chuyển:</Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                    {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')}đ
+                                    {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                             {selectedOrder.discountAmount > 0 && (
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2" color="text.secondary">Giảm giá:</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 700, color: COLORS.error }}>
-                                        -{selectedOrder.discountAmount.toLocaleString('vi-VN')}đ
+                                        -{selectedOrder.discountAmount.toLocaleString('vi-VN')} VNĐ
                                     </Typography>
                                 </Box>
                             )}
@@ -222,7 +339,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>Tổng Thanh Toán:</Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 800, color: COLORS.activeOrange }}>
-                                    {(selectedOrder.total || 0).toLocaleString('vi-VN')}đ
+                                    {(selectedOrder.total || 0).toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
                         </Stack>
@@ -249,6 +366,97 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                     </Typography>
                 </Paper>
             )}
+
+            {/* POPUP ĐÁNH GIÁ SẢN PHẨM */}
+            <Dialog
+                open={feedbackOpen}
+                onClose={handleCloseFeedback}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '16px', p: 1 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: COLORS.primaryBlue, pb: 1 }}>
+                    Đánh Giá Sản Phẩm
+                </DialogTitle>
+                <form onSubmit={handleSubmitFeedback}>
+                    <DialogContent dividers>
+                        <Stack spacing={3} sx={{ py: 1, alignItems: 'center' }}>
+                            {selectedItemForFeedback && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', mb: 1 }}>
+                                    <Avatar
+                                        variant="rounded"
+                                        src={selectedItemForFeedback.product?.imageUrl || '/images/placeholder.png'}
+                                        sx={{ width: 60, height: 60, border: '1px solid #eee' }}
+                                    />
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                                        {selectedItemForFeedback.productName || selectedItemForFeedback.product?.name || 'Sản phẩm'}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: '#333' }}>
+                                    Mức độ hài lòng của bạn
+                                </Typography>
+                                <Rating
+                                    value={rating}
+                                    onChange={(event, newValue) => {
+                                        setRating(newValue || 5);
+                                    }}
+                                    size="large"
+                                    sx={{ color: '#ffb400' }}
+                                />
+                            </Box>
+
+                            <TextField
+                                fullWidth
+                                label="Tiêu đề (Tùy chọn)"
+                                placeholder="Nhập tiêu đề đánh giá..."
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                            />
+
+                            <TextField
+                                fullWidth
+                                multiline
+                                rows={4}
+                                label="Nội dung đánh giá"
+                                placeholder="Hãy chia sẻ trải nghiệm của bạn về sản phẩm này..."
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                                required
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                            />
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, py: 2 }}>
+                        <Button
+                            onClick={handleCloseFeedback}
+                            disabled={submittingFeedback}
+                            sx={{ color: '#666', textTransform: 'none', fontWeight: 600 }}
+                        >
+                            Hủy bỏ
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={submittingFeedback}
+                            sx={{
+                                bgcolor: COLORS.activeOrange,
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                px: 3,
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#e07d00', boxShadow: 'none' }
+                            }}
+                        >
+                            {submittingFeedback ? 'Đang gửi...' : 'Gửi đánh giá'}
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
         </Box>
     );
 }

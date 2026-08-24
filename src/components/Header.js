@@ -89,6 +89,14 @@ export default function Header() {
 
   const dispatch = useDispatch();
   const router = useRouter();
+  const [searchVal, setSearchVal] = useState('');
+
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (searchVal.trim()) {
+      router.push(`/category/search?Search=${encodeURIComponent(searchVal.trim())}`);
+    }
+  };
 
   // Lấy dữ liệu từ Redux
   const { user, loading } = useSelector((state) => state.auth);
@@ -169,7 +177,7 @@ export default function Header() {
         </Box>
       </Box>
     ), {
-      duration: 6000,
+      duration: 1000,
       position: 'top-center',
       style: {
         borderRadius: '16px',
@@ -381,33 +389,18 @@ export default function Header() {
                 </Typography>
               </Link>
 
-              <Box sx={{ display: 'flex', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', height: 44, flexGrow: 1, maxWidth: 550 }}>
-                <InputBase placeholder="Tìm kiếm sản phẩm, quà lưu niệm..." sx={{ ml: 2, flex: 1, fontSize: '0.95rem', color: '#17479d' }} />
-                <Button variant="contained" sx={{ bgcolor: COLORS.accent, color: 'white', borderRadius: 0, minWidth: 60, px: 2, '&:hover': { bgcolor: COLORS.accentHover }, boxShadow: 'none' }}><SearchIcon /></Button>
+              <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', height: 44, flexGrow: 1, maxWidth: 550 }}>
+                <InputBase
+                  placeholder="Tìm kiếm sản phẩm, quà lưu niệm..."
+                  value={searchVal}
+                  onChange={(e) => setSearchVal(e.target.value)}
+                  sx={{ ml: 2, flex: 1, fontSize: '0.95rem', color: '#17479d' }}
+                />
+                <Button type="submit" variant="contained" sx={{ bgcolor: COLORS.accent, color: 'white', borderRadius: 0, minWidth: 60, px: 2, '&:hover': { bgcolor: COLORS.accentHover }, boxShadow: 'none' }}><SearchIcon /></Button>
               </Box>
 
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Button component={Link} href="/tracking" sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, color: 'white', '&:hover': { color: '#ff910d' } }}>
-                  <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    borderRadius: '50%',
-                    width: 36,
-                    height: 36
-                  }}>
-                    <LocalShippingIcon sx={{ fontSize: 18, color: 'white' }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                      Đơn hàng
-                    </Typography>
-                    <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.2, fontSize: '0.7rem' }}>
-                      Theo dõi đơn hàng
-                    </Typography>
-                  </Box>
-                </Button>
+
                 {/* HỖ TRỢ KHÁCH HÀNG */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }}>
                   <Box sx={{
@@ -460,9 +453,14 @@ export default function Header() {
                   <Badge badgeContent={mounted ? totalQuantity : 0} sx={{ '& .MuiBadge-badge': { bgcolor: COLORS.accent, color: 'white', fontWeight: 'bold' } }}><ShoppingCartIcon sx={{ fontSize: '1.8rem' }} /></Badge>
                 </IconButton>
               </Box>
-              <Box sx={{ display: 'flex', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', height: 42, width: '100%' }}>
-                <InputBase placeholder="Tìm kiếm sản phẩm..." sx={{ ml: 2, flex: 1, fontSize: '0.95rem', color: '#17479d' }} />
-                <Button variant="contained" sx={{ bgcolor: COLORS.accent, color: 'white', borderRadius: 0, minWidth: 50, px: 2, '&:hover': { bgcolor: COLORS.accentHover }, boxShadow: 'none' }}><SearchIcon /></Button>
+              <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', height: 42, width: '100%' }}>
+                <InputBase
+                  placeholder="Tìm kiếm sản phẩm..."
+                  value={searchVal}
+                  onChange={(e) => setSearchVal(e.target.value)}
+                  sx={{ ml: 2, flex: 1, fontSize: '0.95rem', color: '#17479d' }}
+                />
+                <Button type="submit" variant="contained" sx={{ bgcolor: COLORS.accent, color: 'white', borderRadius: 0, minWidth: 50, px: 2, '&:hover': { bgcolor: COLORS.accentHover }, boxShadow: 'none' }}><SearchIcon /></Button>
               </Box>
             </Box>
           </Container>

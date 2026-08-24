@@ -16,7 +16,7 @@ const orderService = {
             return response.data;
         } catch (error) {
             console.error("Lỗi khi lấy danh sách đơn hàng:", error.message);
-            return [];
+            throw error;
         }
     },
     getOrderById: async (id) => {

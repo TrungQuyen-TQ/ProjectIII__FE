@@ -2,10 +2,17 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
-    const res = await authService.refreshToken();
-    if (res.success) {
-        return res.data.user;
-    } else {
+    try {
+        const data = await authService.refreshToken();
+        const user = data.user;
+        
+        // Bắt buộc kiểm tra role ở đây
+        if (user.roleId !== 1) {
+            return rejectWithValue('FORBIDDEN_NOT_ADMIN');
+        }
+
+        return user;
+    } catch (err) {
         return rejectWithValue(null);
     }
 });
