@@ -200,9 +200,14 @@ export default function ProductInfo({
     ? selectedVariant.sku
     : product.sku;
 
-  let discountTag = product.discount;
-  if (!discountTag && typeof product.price === 'number' && typeof product.originalPrice === 'number' && product.originalPrice > product.price) {
-    const pct = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const activePriceVal = hasObjectVariants && selectedVariant ? selectedVariant.price : product.price;
+  const activeOriginalPriceVal = hasObjectVariants && selectedVariant
+    ? (selectedVariant.originalPrice || product.originalPrice)
+    : product.originalPrice;
+
+  let discountTag = null;
+  if (typeof activePriceVal === 'number' && typeof activeOriginalPriceVal === 'number' && activeOriginalPriceVal > activePriceVal) {
+    const pct = Math.round(((activeOriginalPriceVal - activePriceVal) / activeOriginalPriceVal) * 100);
     if (pct > 0) {
       discountTag = `-${pct}%`;
     }
@@ -250,8 +255,8 @@ export default function ProductInfo({
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Rating value={product.rating} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
-            <Typography variant="body2" color="text.secondary">({product.reviews} đánh giá)</Typography>
+            <Rating value={Number(product.rating || product.Rating || 0)} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
+            <Typography variant="body2" color="text.secondary">({product.ratingCount !== undefined ? product.ratingCount : (product.RatingCount !== undefined ? product.RatingCount : (product.reviews || 0))} đánh giá)</Typography>
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

@@ -152,7 +152,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
           {/* Đánh giá sao chuẩn MUI */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Rating
-              value={Number(rating) || 5}
+              value={Number(product.rating || product.Rating || rating || 5)}
               readOnly
               size="small"
               sx={{ color: '#ffb800', fontSize: '1rem' }}
@@ -161,7 +161,7 @@ export default function OutletProductCard({ product = {}, onQuickView }) {
               component="span"
               sx={{ color: '#888', fontSize: '12px', ml: 0.5 }}
             >
-              ({rating * 5})
+              ({product.ratingCount !== undefined ? product.ratingCount : (product.RatingCount !== undefined ? product.RatingCount : (product.reviews || 0))})
             </Typography>
           </Box>
         </Box>
