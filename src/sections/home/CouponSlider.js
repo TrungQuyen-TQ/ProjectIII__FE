@@ -16,7 +16,16 @@ export default function CouponSlider() {
         const fetchCoupons = async () => {
             try {
                 const data = await couponService.getAllCoupons(1, 100);
-                setCoupons(data.items || data.Items || []);
+                const rawList = data.items || data.Items || [];
+                const now = new Date();
+                const validCoupons = rawList.filter((coupon) => {
+                    if (coupon.isDeleted || coupon.status === 0) return false;
+                    if (coupon.startDate && new Date(coupon.startDate) > now) return false;
+                    if (coupon.endDate && new Date(coupon.endDate) < now) return false;
+                    if (coupon.quantity > 0 && coupon.usedCount >= coupon.quantity) return false;
+                    return true;
+                });
+                setCoupons(validCoupons);
             } catch (err) {
                 console.error("Lỗi khi tải danh sách mã giảm giá:", err);
             }
@@ -65,11 +74,11 @@ export default function CouponSlider() {
 
     const settings = {
         dots: false,
-        infinite: true,
+        infinite: coupons.length > 3,
         speed: 800,
-        slidesToShow: Math.min(3, coupons.length),
+        slidesToShow: 3,
         slidesToScroll: 1,
-        autoplay: true,
+        autoplay: coupons.length > 3,
         autoplaySpeed: 3000,
         arrows: false,
         pauseOnHover: true,
@@ -77,15 +86,17 @@ export default function CouponSlider() {
             {
                 breakpoint: 1200,
                 settings: {
-                    slidesToShow: Math.min(2, coupons.length),
-                    infinite: true
+                    slidesToShow: 2,
+                    infinite: coupons.length > 2,
+                    autoplay: coupons.length > 2
                 }
             },
             {
                 breakpoint: 768,
                 settings: {
                     slidesToShow: 1,
-                    infinite: true
+                    infinite: coupons.length > 1,
+                    autoplay: coupons.length > 1
                 }
             }
         ]
@@ -106,10 +117,12 @@ export default function CouponSlider() {
                         <Typography variant="h6" sx={{ fontWeight: 800, color: '#17479d', display: 'flex', alignItems: 'center', gap: 1 }}>
                             🎟️ ƯU ĐÃI ĐẶC BIỆT DÀNH CHO BẠN
                         </Typography>
-                        <Box>
-                            <IconButton onClick={() => sliderRef.current?.slickPrev()} sx={{ border: '1px solid #ccc', mr: 1, bgcolor: '#fff', '&:hover': { bgcolor: '#f5f5f5' } }}><KeyboardArrowLeftIcon /></IconButton>
-                            <IconButton onClick={() => sliderRef.current?.slickNext()} sx={{ border: '1px solid #ccc', bgcolor: '#fff', '&:hover': { bgcolor: '#f5f5f5' } }}><KeyboardArrowRightIcon /></IconButton>
-                        </Box>
+                        {coupons.length > 3 && (
+                            <Box>
+                                <IconButton onClick={() => sliderRef.current?.slickPrev()} sx={{ border: '1px solid #ccc', mr: 1, bgcolor: '#fff', '&:hover': { bgcolor: '#f5f5f5' } }}><KeyboardArrowLeftIcon /></IconButton>
+                                <IconButton onClick={() => sliderRef.current?.slickNext()} sx={{ border: '1px solid #ccc', bgcolor: '#fff', '&:hover': { bgcolor: '#f5f5f5' } }}><KeyboardArrowRightIcon /></IconButton>
+                            </Box>
+                        )}
                     </Box>
 
                     <Box sx={{ mx: -1.5 }}>
