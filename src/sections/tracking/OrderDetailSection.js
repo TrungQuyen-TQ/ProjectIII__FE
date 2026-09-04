@@ -11,14 +11,21 @@ import feedbackService from '../../services/feedbackService';
 import productService from '../../services/productService';
 import { getProductImageUrl } from '../../utils/imageHelper';
 
-function OrderItemAvatar({ productId }) {
+function OrderItemAvatar({ item, productId }) {
     const [imageUrl, setImageUrl] = useState('/images/placeholder.png');
 
     useEffect(() => {
+        const directImg = item?.imageUrl || item?.ImageUrl || item?.product?.imageUrl || item?.product?.thumbnail;
+        if (directImg) {
+            setImageUrl(getProductImageUrl(directImg));
+            return;
+        }
+
+        const targetProductId = item?.productId || item?.ProductId || productId;
         const fetchProductImage = async () => {
-            if (!productId) return;
+            if (!targetProductId) return;
             try {
-                const productDetail = await productService.getProductById(productId);
+                const productDetail = await productService.getProductById(targetProductId);
                 if (productDetail) {
                     const img = productDetail.thumbnail || productDetail.Thumbnail || productDetail.image || productDetail.images?.[0];
                     if (img) {
@@ -30,7 +37,7 @@ function OrderItemAvatar({ productId }) {
             }
         };
         fetchProductImage();
-    }, [productId]);
+    }, [item, productId]);
 
     return (
         <Avatar
@@ -80,6 +87,17 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
             const res = await feedbackService.createFeedback(dto);
             if (res.success) {
                 toast.success("Gửi đánh giá thành công!");
+                if (selectedOrder) {
+                    const targetId = selectedItemForFeedback.orderItemId || selectedItemForFeedback.id;
+                    const updateItemsList = (list) => (list || []).map(i => {
+                        if (i.orderItemId === targetId || i.id === targetId) {
+                            return { ...i, isReviewed: true, IsReviewed: true };
+                        }
+                        return i;
+                    });
+                    if (selectedOrder.items) selectedOrder.items = updateItemsList(selectedOrder.items);
+                    if (selectedOrder.orderDetails) selectedOrder.orderDetails = updateItemsList(selectedOrder.orderDetails);
+                }
                 handleCloseFeedback();
             } else {
                 toast.error(res.error || "Gửi đánh giá thất bại.");
@@ -268,7 +286,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                             <Stack spacing={2} sx={{ maxHeight: 220, overflowY: 'auto', pr: 1 }}>
                                 {(selectedOrder.items || selectedOrder.orderDetails || []).map((item, idx) => (
                                     <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#ffffff', p: 1.5, borderRadius: '8px', border: '1px solid #eef2f6', flexWrap: 'wrap' }}>
-                                        <OrderItemAvatar productId={item.productId} />
+                                        <OrderItemAvatar item={item} productId={item.productId} />
                                         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {item.productName || item.product?.name || 'Sản phẩm'}
@@ -281,30 +299,35 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: COLORS.primaryBlue }}>
                                                 {(item.unitPrice || item.price || 0).toLocaleString('vi-VN')} VNĐ
                                             </Typography>
-                                            {selectedOrder.orderStatusName === 'Hoàn thành' && (
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    disabled={Boolean(item.isReviewed || item.IsReviewed)}
-                                                    onClick={() => handleOpenFeedback(item)}
-                                                    sx={{
-                                                        bgcolor: COLORS.activeOrange,
-                                                        color: 'white',
-                                                        textTransform: 'none',
-                                                        fontWeight: 700,
-                                                        fontSize: '0.75rem',
-                                                        borderRadius: '6px',
-                                                        boxShadow: 'none',
-                                                        '&:hover': { bgcolor: '#e07d00', boxShadow: 'none' },
-                                                        '&.Mui-disabled': {
-                                                            bgcolor: '#e2e8f0',
-                                                            color: '#94a3b8'
-                                                        }
-                                                    }}
-                                                >
-                                                    {item.isReviewed || item.IsReviewed ? 'Đã đánh giá' : 'Đánh giá'}
-                                                </Button>
-                                            )}
+                                            {(selectedOrder.orderStatusName === 'Hoàn thành' || selectedOrder.orderStatusName === 'Hoàn tất' || selectedOrder.orderStatus === 3 || selectedOrder.orderStatus === 'COMPLETED') && (() => {
+                                                const reviewed = Boolean(item.isReviewed || item.IsReviewed || item.is_reviewed);
+                                                return (
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        disabled={reviewed}
+                                                        onClick={() => {
+                                                            if (!reviewed) handleOpenFeedback(item);
+                                                        }}
+                                                        sx={{
+                                                            bgcolor: reviewed ? '#e2e8f0' : COLORS.activeOrange,
+                                                            color: reviewed ? '#94a3b8' : 'white',
+                                                            textTransform: 'none',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.75rem',
+                                                            borderRadius: '6px',
+                                                            boxShadow: 'none',
+                                                            '&:hover': { bgcolor: reviewed ? '#e2e8f0' : '#e07d00', boxShadow: 'none' },
+                                                            '&.Mui-disabled': {
+                                                                bgcolor: '#e2e8f0',
+                                                                color: '#94a3b8'
+                                                            }
+                                                        }}
+                                                    >
+                                                        {reviewed ? 'Đã đánh giá' : 'Đánh giá'}
+                                                    </Button>
+                                                );
+                                            })()}
                                         </Stack>
                                     </Box>
                                 ))}
@@ -385,7 +408,7 @@ export default function OrderDetailSection({ selectedOrder, loadingDetails, COLO
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', mb: 1 }}>
                                     <Avatar
                                         variant="rounded"
-                                        src={selectedItemForFeedback.product?.imageUrl || '/images/placeholder.png'}
+                                        src={getProductImageUrl(selectedItemForFeedback.imageUrl || selectedItemForFeedback.ImageUrl || selectedItemForFeedback.product?.imageUrl || selectedItemForFeedback.product?.thumbnail || '/images/placeholder.png')}
                                         sx={{ width: 60, height: 60, border: '1px solid #eee' }}
                                     />
                                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
