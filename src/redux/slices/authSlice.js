@@ -3,15 +3,12 @@ import authService from '../../services/authService';
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
     try {
-        const data = await authService.refreshToken();
-        const user = data.user;
-        
-        // Bắt buộc kiểm tra role ở đây
-        if (user.roleId !== 1) {
-            return rejectWithValue('FORBIDDEN_NOT_ADMIN');
+        const res = await authService.refreshToken();
+        if (!res.success || !res.data?.user) {
+            return rejectWithValue(res.error || 'INVALID_SESSION');
         }
 
-        return user;
+        return res.data.user;
     } catch (err) {
         return rejectWithValue(null);
     }
