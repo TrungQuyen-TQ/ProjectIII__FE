@@ -26,10 +26,9 @@ const COLORS = {
 };
 
 const trackingSteps = [
-    'Chờ xác nhận',
-    'Đã xác nhận',
-    'Đang giao hàng',
-    'Giao thành công'
+    'Mới',
+    'Đang xử lý',
+    'Hoàn thành'
 ];
 
 export default function TrackingPage() {
@@ -121,32 +120,104 @@ export default function TrackingPage() {
         fetchOrderDetails();
     }, [selectedOrderId]);
 
-    const handleCancelOrder = async () => {
+    const handleCancelOrder = () => {
         if (!selectedOrderId) return;
-        if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
 
-        try {
-            const loadingToast = toast.loading("Đang tiến hành hủy đơn hàng...");
-            await orderService.cancelOrder(selectedOrderId);
-            toast.dismiss(loadingToast);
-            toast.success("Hủy đơn hàng thành công!");
+        toast((t) => (
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, p: 0.5, minWidth: 280 }}>
+                <Box sx={{
+                    bgcolor: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    borderRadius: '50%',
+                    p: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                }}>
+                    <ShoppingBagIcon sx={{ fontSize: 20 }} />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5, lineHeight: 1.2 }}>
+                            Xác nhận hủy đơn hàng
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                            Bạn có chắc chắn muốn hủy đơn hàng này không?
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
+                            size="small"
+                            variant="text"
+                            onClick={() => toast.dismiss(t.id)}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                color: '#64748b',
+                                borderRadius: '8px',
+                                px: 2,
+                                '&:hover': { bgcolor: '#f1f5f9' }
+                            }}
+                        >
+                            Hủy bỏ
+                        </Button>
+                        <Button
+                            size="small"
+                            variant="contained"
+                            onClick={async () => {
+                                toast.dismiss(t.id);
+                                try {
+                                    const loadingToast = toast.loading("Đang tiến hành hủy đơn hàng...");
+                                    await orderService.cancelOrder(selectedOrderId);
+                                    toast.dismiss(loadingToast);
+                                    toast.success("Hủy đơn hàng thành công!");
 
-            // Reload order list
-            const data = await orderService.getMyOrders();
-            const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
-            const sortedOrders = fetchedOrders.sort((a, b) => {
-                const dateA = new Date(a.createdAt || a.CreatedAt || 0);
-                const dateB = new Date(b.createdAt || b.CreatedAt || 0);
-                return dateB - dateA;
-            });
-            setOrders(sortedOrders);
+                                    // Reload order list
+                                    const data = await orderService.getMyOrders();
+                                    const fetchedOrders = Array.isArray(data) ? data : (data.items || data.Items || []);
+                                    const sortedOrders = fetchedOrders.sort((a, b) => {
+                                        const dateA = new Date(a.createdAt || a.CreatedAt || 0);
+                                        const dateB = new Date(b.createdAt || b.CreatedAt || 0);
+                                        return dateB - dateA;
+                                    });
+                                    setOrders(sortedOrders);
 
-            // Reload current details
-            const detailData = await orderService.getOrderById(selectedOrderId);
-            setSelectedOrderDetails(detailData);
-        } catch (err) {
-            toast.error(err.response?.data?.message || err.message || "Hủy đơn hàng thất bại. Vui lòng thử lại!");
-        }
+                                    // Reload current details
+                                    const detailData = await orderService.getOrderById(selectedOrderId);
+                                    setSelectedOrderDetails(detailData);
+                                } catch (err) {
+                                    toast.error(err.response?.data?.message || err.message || "Hủy đơn hàng thất bại. Vui lòng thử lại!");
+                                }
+                            }}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                px: 2.5,
+                                bgcolor: '#ef4444',
+                                fontWeight: 600,
+                                boxShadow: 'none',
+                                '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }
+                            }}
+                        >
+                            Xác nhận hủy
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
+        ), {
+            duration: 8000,
+            position: 'top-center',
+            style: {
+                borderRadius: '16px',
+                background: '#ffffff',
+                color: '#1e293b',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                padding: '16px',
+                border: '1px solid #f1f5f9',
+                maxWidth: '380px'
+            }
+        });
     };
 
     const getStatusLabel = (order) => {
@@ -157,9 +228,11 @@ export default function TrackingPage() {
             return { label: label, color: COLORS.warning, stepIndex: 0 };
         } else if (label === 'Đang xử lý') {
             return { label: label, color: COLORS.info, stepIndex: 1 };
-        } else if (label === 'Hoàn tất') {
-            return { label: label, color: COLORS.success, stepIndex: 3 };
+        } else if (label === 'Hoàn thành') {
+            return { label: label, color: COLORS.success, stepIndex: 2 };
         } else if (label === 'Đã hủy') {
+            return { label: label, color: COLORS.error, stepIndex: -1 };
+        } else if (label === 'Trả hàng') {
             return { label: label, color: COLORS.error, stepIndex: -1 };
         }
         

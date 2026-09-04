@@ -81,8 +81,10 @@ export default function ProductCard({ product, onQuickView }) {
 
         {/* RATING */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
-          <Rating value={product.rating || 5} precision={0.5} readOnly size="small" sx={{ color: '#ffc107', fontSize: '1rem' }} />
-          <Typography variant="caption" sx={{ color: '#9e9e9e', ml: 0.5 }}>({product.reviews || product.reviewCount || 0})</Typography>
+          <Rating value={product.rating || product.Rating || 5} precision={0.5} readOnly size="small" sx={{ color: '#ffc107', fontSize: '1rem' }} />
+          <Typography variant="caption" sx={{ color: '#9e9e9e', ml: 0.5 }}>
+            ({product.ratingCount !== undefined ? product.ratingCount : (product.RatingCount !== undefined ? product.RatingCount : (product.reviews || product.reviewCount || 0))})
+          </Typography>
         </Box>
 
         {/* GIÁ SẢN PHẨM */}

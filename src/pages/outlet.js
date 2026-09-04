@@ -5,33 +5,54 @@ import {
   Container,
   Typography,
   Button,
-  Stack,
-  Chip,
   CircularProgress
 } from '@mui/material';
 
 import MainLayout from '../layouts/MainLayout';
 import OutletProductCard from '../components/OutletProductCard';
 import QuickViewDialog from '../components/QuickViewDialog';
+import Slider from 'react-slick';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import { IconButton } from '@mui/material';
+
 import {
-  getOutletCategorySections,
-  TARGET_CATEGORIES,
+  getOutletCategorySections
 } from '../utils/outletHelpers';
 
-import { productApi } from '../api/product-api';
+// IMPORT SERVICE MỚI
+import productService from '../services/productService';
+import categoryService from '../services/categoryService';
 
-// Dữ liệu mẫu (Dùng để backup nếu API lỗi hoặc server chưa chạy)
+// Dữ liệu mẫu (Backup)
 import { dataProducts as productsData } from '../data/dataProducts';
 import { dataCategories as categoriesData } from '../data/dataCategories';
 
+// --- MŨI TÊN SLIDER ---
+const ProductPrevArrow = ({ onClick }) => (
+  <IconButton onClick={onClick} sx={{ position: 'absolute', top: '40%', left: -20, transform: 'translateY(-50%)', zIndex: 2, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', width: 40, height: 40, '&:hover': { bgcolor: '#f5f5f5' }, display: { xs: 'none', md: 'flex' } }}>
+    <ArrowBackIosNewIcon sx={{ fontSize: 18, color: '#17479d' }} />
+  </IconButton>
+);
+
+const ProductNextArrow = ({ onClick }) => (
+  <IconButton onClick={onClick} sx={{ position: 'absolute', top: '40%', right: -20, transform: 'translateY(-50%)', zIndex: 2, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', width: 40, height: 40, '&:hover': { bgcolor: '#f5f5f5' }, display: { xs: 'none', md: 'flex' } }}>
+    <ArrowForwardIosIcon sx={{ fontSize: 18, color: '#17479d' }} />
+  </IconButton>
+);
+
+const sliderSettings = {
+  dots: false, infinite: false, speed: 500, slidesToShow: 4, slidesToScroll: 2,
+  prevArrow: <ProductPrevArrow />, nextArrow: <ProductNextArrow />,
+  responsive: [
+    { breakpoint: 1200, settings: { slidesToShow: 4 } },
+    { breakpoint: 900, settings: { slidesToShow: 3 } },
+    { breakpoint: 600, settings: { slidesToShow: 2, arrows: false } },
+  ]
+};
 
 // ================= COMPONENT: GIAN HÀNG & NÚT XEM THÊM =================
 function CategorySectionBlock({ section, onQuickView, onResetTab }) {
-  const [visibleCount, setVisibleCount] = useState(4);
-  const hasMore = section.products.length > visibleCount;
-
-  const handleLoadMore = () => setVisibleCount((prev) => prev + 4);
-
   return (
     <Box
       sx={{
@@ -49,43 +70,20 @@ function CategorySectionBlock({ section, onQuickView, onResetTab }) {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, mb: 2.5, pb: 2, borderBottom: '2px solid #f0f3f8' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, pb: 2, borderBottom: '2px solid #f0f3f8' }}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: '#003366', m: 0 }}>{section.bannerTitle}</Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {['Sinh nhật', 'Lễ Tết', 'Tình yêu'].map((item) => (
-            <Chip key={item} label={item} size="small" variant="outlined" sx={{ fontWeight: 500, borderColor: '#dcdfe6', color: '#555', bgcolor: '#fff' }} />
+      </Box>
+
+      {/* LƯỚI SẢN PHẨM TRƯỢT NGANG */}
+      <Box sx={{ mx: { xs: -1, md: -1.5 }, position: 'relative' }}>
+        <Slider {...sliderSettings}>
+          {section.products.map((product) => (
+            <Box key={product.id} sx={{ px: { xs: 1, md: 1.5 }, pb: 2, pt: 1, height: '100%' }}>
+              <OutletProductCard product={product} onQuickView={onQuickView} />
+            </Box>
           ))}
-          <Chip label="Xem tất cả" size="small" onClick={onResetTab} sx={{ fontWeight: 600, bgcolor: '#fffaf0', color: '#ff9900', borderColor: '#ff9900', border: '1px solid #ff9900' }} />
-        </Stack>
+        </Slider>
       </Box>
-
-      {/* CÂN BẰNG THẺ SẢN PHẨM BẰNG CSS GRID */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(1, 1fr)',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-            lg: 'repeat(4, 1fr)',
-          },
-          gap: 2.5,
-        }}
-      >
-        {section.products.slice(0, visibleCount).map((product) => (
-          <Box key={product.id} sx={{ height: '100%' }}>
-            <OutletProductCard product={product} onQuickView={onQuickView} />
-          </Box>
-        ))}
-      </Box>
-
-      {hasMore && (
-        <Box sx={{ textAlign: 'center', mt: 3.5, pt: 1 }}>
-          <Button variant="contained" onClick={handleLoadMore} sx={{ bgcolor: '#ff1a3c', color: '#ffffff', fontWeight: 700, fontSize: '14px', textTransform: 'none', px: 4, py: 1.2, borderRadius: 2, '&:hover': { bgcolor: '#e01030' } }}>
-            Xem thêm ({section.products.length - visibleCount} sản phẩm)
-          </Button>
-        </Box>
-      )}
     </Box>
   );
 }
@@ -96,38 +94,96 @@ export default function OutletPage() {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('ALL');
 
-  // KHAI BÁO STATE QUẢN LÝ DỮ LIỆU TỪ API
-  const [dbProducts, setDbProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [outletSections, setOutletSections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // GỌI API LẤY SẢN PHẨM THỰC TẾ TỪ DATABASE
+  // SỬ DỤNG SERVICE ĐỂ GỌI API
   useEffect(() => {
-    const fetchProducts = async () => {
+    const isUuid = (str) => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    };
+
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Gọi hàm getAll từ productApi
-        const responseData = await productApi.getAll();
 
-        // Chuẩn hóa dữ liệu phòng hờ backend trả về dạng { data: [...] } hoặc { items: [...] }
-        const productList = Array.isArray(responseData)
-          ? responseData
-          : (responseData?.data || responseData?.items || []);
+        // 1. Tải danh mục từ API
+        const categoryList = await categoryService.getCategories();
+        let catData = [];
+        if (categoryList && categoryList.length > 0) {
+          catData = categoryList;
+        } else {
+          catData = categoriesData;
+        }
+        setCategories(catData);
 
-        setDbProducts(productList);
+        // Lấy danh mục cha (parentId = null)
+        const rootCats = catData.filter(c => !c.parentId && !c.parent_id);
+
+        // 2. Tải sản phẩm cho từng danh mục cha từ API qua categoryId
+        const allFetchedProducts = [];
+
+        for (const cat of rootCats) {
+          // Tìm các danh mục con
+          const childCategories = catData.filter(
+            c => c.parentId === cat.id || c.parent_id === cat.id
+          );
+          const categoryIds = [cat.id, ...childCategories.map(c => c.id)];
+
+          let apiProductsMerged = [];
+          for (const id of categoryIds) {
+            if (isUuid(id)) {
+              // Gọi API lấy sản phẩm theo CategoryId
+              const apiProds = await productService.getProducts({ categoryId: id });
+              if (apiProds && apiProds.length > 0) {
+                // Đảm bảo gán categoryId cho sản phẩm nếu chưa có
+                const mapped = apiProds.map(p => ({ ...p, categoryId: id }));
+                apiProductsMerged = [...apiProductsMerged, ...mapped];
+              }
+            }
+          }
+
+          // Loại bỏ sản phẩm trùng lặp
+          const uniqueProducts = [];
+          const seenIds = new Set();
+          for (const p of apiProductsMerged) {
+            const pId = p.id || p.Id;
+            if (!seenIds.has(pId)) {
+              seenIds.add(pId);
+              uniqueProducts.push(p);
+            }
+          }
+
+          if (uniqueProducts.length > 0) {
+            allFetchedProducts.push(...uniqueProducts);
+          }
+        }
+
+        // Nếu không lấy được sản phẩm nào từ API, dùng dữ liệu mẫu làm backup
+        let finalProducts = allFetchedProducts;
+        if (finalProducts.length === 0) {
+          finalProducts = productsData;
+        }
+
+        // 3. Gọi helper để xử lý lọc sản phẩm giảm giá trên 25% và gom nhóm thành các Section
+        const sections = getOutletCategorySections(finalProducts, catData);
+        setOutletSections(sections);
+
       } catch (error) {
-        console.error("Lỗi khi kết nối Database lấy sản phẩm:", error);
-        // FALLBACK: Nếu backend sập hoặc chưa bật, load lại data ảo để giao diện không bị lỗi trắng
-        setDbProducts(productsData);
+        console.error("Lỗi khi kết nối Database lấy sản phẩm/danh mục:", error);
+        // Fallback dùng dữ liệu mẫu
+        const sections = getOutletCategorySections(productsData, categoriesData);
+        setOutletSections(sections);
+        setCategories(categoriesData);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
-  // Lọc sản phẩm vào các gian hàng (Lưu ý: hàm helper của bạn sẽ tự bóc tách sản phẩm nào có giảm giá)
-  const outletSections = getOutletCategorySections(dbProducts, categoriesData);
   const displayedSections = activeTab === 'ALL' ? outletSections : outletSections.filter((sec) => sec.id === activeTab);
 
   const handleQuickView = (product) => {
@@ -154,54 +210,15 @@ export default function OutletPage() {
         }}
       >
 
-        {/* === HERO BANNER FULL ẢNH === */}
-        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e', display: 'flex', justifyContent: 'center' }}>
-          <Box
-            component="img"
-            src="/banner/banner-main.jpg"
-            alt="ARTS Outlet Xả Kho Giá Hời"
-            sx={{
-              width: '100%',
-              maxWidth: '1440px',
-              height: 'auto',
-              display: 'block',
-            }}
-          />
-        </Box>
 
-        {/* === BANNER CAM KẾT OUTLET === */}
-        <Container maxWidth="md" sx={{ mt: { xs: -2, md: -4 }, mb: 4, position: 'relative', zIndex: 10 }}>
-          <Box sx={{ background: 'linear-gradient(180deg, #2b417e 0%, #16244f 100%)', border: '3px solid #ffda6a', borderRadius: 5, py: 2, px: 3, textAlign: 'center', boxShadow: '0 8px 20px rgba(22, 36, 79, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.15)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff000', textTransform: 'uppercase', fontFamily: "'Arial Black', sans-serif", textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)', fontSize: { xs: '16px', md: '20px' } }}>
-              CHÍNH HÃNG GIÁ OUTLET — ⚡ CHỐT DEAL NGAY KHÔNG CẦN NGHĨ! ⚡
-            </Typography>
-          </Box>
-        </Container>
 
-        {/* === THANH LỌC DANH MỤC === */}
-        <Box sx={{ bgcolor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)', borderTop: '1px solid #e2e8f0', borderBottom: '2px solid #e2e8f0', mb: 4, position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          <Container maxWidth="lg">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1.5, overflowX: 'auto', whiteSpace: 'nowrap', '&::-webkit-scrollbar': { display: 'none' } }}>
-              <Button variant={activeTab === 'ALL' ? 'contained' : 'outlined'} onClick={() => setActiveTab('ALL')} sx={{ borderRadius: 5, textTransform: 'none', fontWeight: 600, fontSize: '14px', px: 2.2, py: 0.8, borderColor: '#e2e8f0', bgcolor: activeTab === 'ALL' ? '#1b2a4e' : '#f8fafc', color: activeTab === 'ALL' ? '#fff' : '#1e293b', '&:hover': { borderColor: '#1b2a4e', color: activeTab === 'ALL' ? '#fff' : '#1b2a4e' } }}>
-                🔥 Tất cả gian hàng
-              </Button>
-              {TARGET_CATEGORIES.map((cat) => {
-                const isActive = activeTab === cat.id;
-                return (
-                  <Button key={cat.id} variant={isActive ? 'contained' : 'outlined'} onClick={() => setActiveTab(cat.id)} sx={{ borderRadius: 5, textTransform: 'none', fontWeight: 600, fontSize: '14px', px: 2.2, py: 0.8, borderColor: '#e2e8f0', bgcolor: isActive ? '#1b2a4e' : '#f8fafc', color: isActive ? '#fff' : '#1e293b', '&:hover': { borderColor: '#1b2a4e', color: isActive ? '#fff' : '#1b2a4e' } }}>
-                    <span style={{ marginRight: 6 }}>{cat.icon}</span> {cat.name}
-                  </Button>
-                );
-              })}
-            </Box>
-          </Container>
-        </Box>
+
 
         {/* === CÁC GIAN HÀNG === */}
-        <Container maxWidth="lg">
+        <Container maxWidth="lg" sx={{ mt: 5 }}>
           {/* MÀN HÌNH LOADING */}
           {isLoading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10, mt: 10 }}>
               <CircularProgress sx={{ color: '#ffda6a', mb: 2 }} />
               <Typography sx={{ color: '#fff', fontWeight: 600 }}>Đang tải sản phẩm siêu sale...</Typography>
             </Box>
@@ -223,7 +240,7 @@ export default function OutletPage() {
 
         {/* === MODAL XEM NHANH === */}
         {isQuickViewOpen && selectedProduct && (
-          <QuickViewDialog product={selectedProduct} isOpen={isQuickViewOpen} onClose={() => setIsQuickViewOpen(false)} />
+          <QuickViewDialog product={selectedProduct} open={isQuickViewOpen} onClose={() => setIsQuickViewOpen(false)} />
         )}
       </Box>
     </MainLayout>

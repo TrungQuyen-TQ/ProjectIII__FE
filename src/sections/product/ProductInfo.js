@@ -68,9 +68,30 @@ export default function ProductInfo({
   const [brandName, setBrandName] = useState('');
 
   useEffect(() => {
-    setSelectedVariant(null);
-    setSelectedAttributes({});
-    setSelectedStringVariant('');
+    if (product && Array.isArray(product.variants) && product.variants.length > 0) {
+      if (typeof product.variants[0] === 'object') {
+        const firstVar = product.variants[0];
+        setSelectedVariant(firstVar);
+        if (firstVar.attributes) {
+          setSelectedAttributes(firstVar.attributes);
+        }
+        const img = firstVar.thumbnail || (firstVar.images && firstVar.images[0]);
+        if (img) {
+          setActiveThumb(img);
+        }
+      } else {
+        setSelectedStringVariant(product.variants[0]);
+        if (Array.isArray(product.thumbnails) && product.thumbnails[0]) {
+          setActiveThumb(product.thumbnails[0]);
+        } else if (Array.isArray(product.images) && product.images[0]) {
+          setActiveThumb(product.images[0]);
+        }
+      }
+    } else {
+      setSelectedVariant(null);
+      setSelectedAttributes({});
+      setSelectedStringVariant('');
+    }
   }, [product]);
 
   useEffect(() => {
@@ -179,9 +200,14 @@ export default function ProductInfo({
     ? selectedVariant.sku
     : product.sku;
 
-  let discountTag = product.discount;
-  if (!discountTag && typeof product.price === 'number' && typeof product.originalPrice === 'number' && product.originalPrice > product.price) {
-    const pct = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const activePriceVal = hasObjectVariants && selectedVariant ? selectedVariant.price : product.price;
+  const activeOriginalPriceVal = hasObjectVariants && selectedVariant
+    ? (selectedVariant.originalPrice || product.originalPrice)
+    : product.originalPrice;
+
+  let discountTag = null;
+  if (typeof activePriceVal === 'number' && typeof activeOriginalPriceVal === 'number' && activeOriginalPriceVal > activePriceVal) {
+    const pct = Math.round(((activeOriginalPriceVal - activePriceVal) / activeOriginalPriceVal) * 100);
     if (pct > 0) {
       discountTag = `-${pct}%`;
     }
@@ -198,26 +224,28 @@ export default function ProductInfo({
           <Box sx={{ bgcolor: '#f8f9fa', borderRadius: '12px', p: 2, mb: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f0f0f0' }}>
             <Box component="img" src={getProductImageUrl(activeThumb) || displayImage} sx={{ width: '100%', maxHeight: { xs: 300, md: 450 }, objectFit: 'contain' }} />
           </Box>
-          <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 1 }}>
-            {displayThumbnails.map((thumb, idx) => (
-              <Box
-                key={idx}
-                onClick={() => setActiveThumb(thumb)}
-                sx={{
-                  width: 70, height: 70,
-                  borderRadius: '6px',
-                  border: getProductImageUrl(activeThumb || displayImage) === thumb ? '2px solid #2962ff' : '1.5px solid #e0e0e0',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: '0.2s',
-                  '&:hover': { borderColor: '#2962ff' }
-                }}
-              >
-                <Box component="img" src={thumb} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </Box>
-            ))}
-          </Stack>
+          {displayThumbnails.length > 1 && (
+            <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 1 }}>
+              {displayThumbnails.map((thumb, idx) => (
+                <Box
+                  key={idx}
+                  onClick={() => setActiveThumb(thumb)}
+                  sx={{
+                    width: 70, height: 70,
+                    borderRadius: '6px',
+                    border: getProductImageUrl(activeThumb || displayImage) === thumb ? '2px solid #2962ff' : '1.5px solid #e0e0e0',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: '0.2s',
+                    '&:hover': { borderColor: '#2962ff' }
+                  }}
+                >
+                  <Box component="img" src={thumb} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </Box>
+              ))}
+            </Stack>
+          )}
         </Box>
 
         {/* CỘT PHẢI: THÔNG TIN CHI TIẾT */}
@@ -227,8 +255,8 @@ export default function ProductInfo({
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Rating value={product.rating} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
-            <Typography variant="body2" color="text.secondary">({product.reviews} đánh giá)</Typography>
+            <Rating value={Number(product.rating || product.Rating || 0)} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
+            <Typography variant="body2" color="text.secondary">({product.ratingCount !== undefined ? product.ratingCount : (product.RatingCount !== undefined ? product.RatingCount : (product.reviews || 0))} đánh giá)</Typography>
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -269,27 +297,6 @@ export default function ProductInfo({
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Phân loại:</Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-                <Button
-                  variant={selectedVariant === null ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => handleSelectVariant(null)}
-                  sx={{
-                    borderRadius: '6px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 2,
-                    py: 0.5,
-                    borderColor: selectedVariant === null ? '#2962ff' : '#e0e0e0',
-                    bgcolor: selectedVariant === null ? '#2962ff' : 'white',
-                    color: selectedVariant === null ? 'white' : '#555',
-                    '&:hover': {
-                      borderColor: '#2962ff',
-                      bgcolor: selectedVariant === null ? '#1c4cc7' : 'rgba(41, 98, 255, 0.04)'
-                    }
-                  }}
-                >
-                  Sản phẩm gốc
-                </Button>
                 {product.variants.map((v) => {
                   const isSelected = selectedVariant && selectedVariant.id === v.id;
                   const label = v.name || Object.values(v.attributes || {}).join(' - ') || 'Biến thể';
@@ -327,27 +334,6 @@ export default function ProductInfo({
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Phân loại:</Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-                <Button
-                  variant={selectedStringVariant === '' ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => handleSelectStringVariant('', -1)}
-                  sx={{
-                    borderRadius: '6px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 2,
-                    py: 0.5,
-                    borderColor: selectedStringVariant === '' ? '#2962ff' : '#e0e0e0',
-                    bgcolor: selectedStringVariant === '' ? '#2962ff' : 'white',
-                    color: selectedStringVariant === '' ? 'white' : '#555',
-                    '&:hover': {
-                      borderColor: '#2962ff',
-                      bgcolor: selectedStringVariant === '' ? '#1c4cc7' : 'rgba(41, 98, 255, 0.04)'
-                    }
-                  }}
-                >
-                  Sản phẩm gốc
-                </Button>
                 {product.variants.map((val, idx) => {
                   const isSelected = selectedStringVariant === val;
                   return (

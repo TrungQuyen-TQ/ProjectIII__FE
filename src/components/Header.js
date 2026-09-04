@@ -177,7 +177,7 @@ export default function Header() {
         </Box>
       </Box>
     ), {
-      duration: 6000,
+      duration: 1000,
       position: 'top-center',
       style: {
         borderRadius: '16px',
@@ -221,7 +221,7 @@ export default function Header() {
     // Chuẩn hóa subItems thành danh sách object { label, href }
     subItems: (cat.subItems || []).map(sub => ({
       label: `${sub.icon || ''} ${sub.title || sub.name}`.trim(),
-      href: `/category/${sub.id}`
+      href: `/category/${cat.id}/${sub.id}`
     })),
     isExtra: false
   }));

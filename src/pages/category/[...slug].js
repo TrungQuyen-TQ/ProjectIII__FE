@@ -128,7 +128,8 @@ export default function CategoryPage() {
             setLoading(true);
             try {
                 const mainCategorySlug = slug[0];
-                const targetCategoryId = appliedFilters.selectedSubId || mainCategorySlug;
+                const subCategorySlug = slug[1];
+                const targetCategoryId = appliedFilters.selectedSubId || subCategorySlug || mainCategorySlug;
                 const searchParam = router.query.Search;
 
                 let apiProducts = [];
@@ -214,11 +215,26 @@ export default function CategoryPage() {
     const mainCategorySlug = slug[0];
     const subCategorySlug = slug[1];
 
-    const mainCategory = categories.find(cat => String(cat.id) === String(mainCategorySlug));
+    let mainCategory = categories.find(cat => String(cat.id) === String(mainCategorySlug));
+    let subCategory = null;
+
+    if (!mainCategory && mainCategorySlug !== 'search') {
+        for (const cat of categories) {
+            const foundSub = (cat.subItems || []).find(sub => String(sub.id) === String(mainCategorySlug));
+            if (foundSub) {
+                mainCategory = cat;
+                subCategory = foundSub;
+                break;
+            }
+        }
+    }
+
     const mainCategoryName = mainCategorySlug === 'search' ? `Tìm kiếm: "${router.query.Search || ''}"` : (mainCategory ? (mainCategory.title || mainCategory.name) : 'Sản phẩm');
     const subItemsListRaw = mainCategory ? (mainCategory.subItems || []) : [];
 
-    const subCategory = subItemsListRaw.find(sub => String(sub.id) === String(appliedFilters.selectedSubId || subCategorySlug));
+    if (!subCategory) {
+        subCategory = subItemsListRaw.find(sub => String(sub.id) === String(appliedFilters.selectedSubId || subCategorySlug));
+    }
     const subCategoryName = subCategory ? (subCategory.title || subCategory.name) : (appliedFilters.selectedSubId || subCategorySlug ? `Phân loại` : null);
 
     const handleApplyFilters = () => {
@@ -256,16 +272,14 @@ export default function CategoryPage() {
                             <Link href="/" style={{ display: 'flex', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
                                 <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Trang chủ
                             </Link>
-                            {subCategorySlug ? (
-                                <Link href={`/category/${mainCategorySlug}`} style={{ color: '#666', textDecoration: 'none' }}>
+                            {subCategoryName && mainCategory && (
+                                <Link href={`/category/${mainCategory.id}`} style={{ color: '#666', textDecoration: 'none' }}>
                                     {mainCategoryName}
                                 </Link>
-                            ) : (
-                                <Typography sx={{ color: '#17479d', fontWeight: 600 }}>{mainCategoryName}</Typography>
                             )}
-                            {(subCategorySlug || appliedFilters.selectedSubId) && (
-                                <Typography sx={{ color: '#17479d', fontWeight: 600 }}>{subCategoryName}</Typography>
-                            )}
+                            <Typography sx={{ color: '#17479d', fontWeight: 600 }}>
+                                {subCategoryName || mainCategoryName}
+                            </Typography>
                         </Breadcrumbs>
 
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'flex-start' }}>
