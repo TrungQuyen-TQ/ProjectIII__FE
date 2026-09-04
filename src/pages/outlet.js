@@ -5,8 +5,6 @@ import {
   Container,
   Typography,
   Button,
-  Stack,
-  Chip,
   CircularProgress
 } from '@mui/material';
 
@@ -72,14 +70,8 @@ function CategorySectionBlock({ section, onQuickView, onResetTab }) {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, mb: 2.5, pb: 2, borderBottom: '2px solid #f0f3f8' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, pb: 2, borderBottom: '2px solid #f0f3f8' }}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: '#003366', m: 0 }}>{section.bannerTitle}</Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {['Sinh nhật', 'Lễ Tết', 'Tình yêu'].map((item) => (
-            <Chip key={item} label={item} size="small" variant="outlined" sx={{ fontWeight: 500, borderColor: '#dcdfe6', color: '#555', bgcolor: '#fff' }} />
-          ))}
-          <Chip label="Xem tất cả" size="small" onClick={onResetTab} sx={{ fontWeight: 600, bgcolor: '#fffaf0', color: '#ff9900', borderColor: '#ff9900', border: '1px solid #ff9900' }} />
-        </Stack>
       </Box>
 
       {/* LƯỚI SẢN PHẨM TRƯỢT NGANG */}
@@ -218,37 +210,15 @@ export default function OutletPage() {
         }}
       >
 
-        {/* === HERO BANNER FULL ẢNH === */}
-        <Box sx={{ width: '100%', position: 'relative', overflow: 'hidden', bgcolor: '#1b2a4e', display: 'flex', justifyContent: 'center' }}>
-          <Box
-            component="img"
-            src="/banner/bannermain.jpg"
-            alt="ARTS Outlet Xả Kho Giá Hời"
-            sx={{
-              width: '100%',
-              maxWidth: '1440px',
-              height: 'auto',
-              display: 'block',
-            }}
-          />
-        </Box>
 
-        {/* === BANNER CAM KẾT OUTLET === */}
-        <Container maxWidth="md" sx={{ mt: { xs: -2, md: -4 }, mb: 4, position: 'relative', zIndex: 10 }}>
-          <Box sx={{ background: 'linear-gradient(180deg, #2b417e 0%, #16244f 100%)', border: '3px solid #ffda6a', borderRadius: 5, py: 2, px: 3, textAlign: 'center', boxShadow: '0 8px 20px rgba(22, 36, 79, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.15)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff000', textTransform: 'uppercase', fontFamily: "'Arial Black', sans-serif", textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)', fontSize: { xs: '16px', md: '20px' } }}>
-              CHÍNH HÃNG GIÁ OUTLET — ⚡ CHỐT DEAL NGAY KHÔNG CẦN NGHĨ! ⚡
-            </Typography>
-          </Box>
-        </Container>
 
 
 
         {/* === CÁC GIAN HÀNG === */}
-        <Container maxWidth="lg">
+        <Container maxWidth="lg" sx={{ mt: 5 }}>
           {/* MÀN HÌNH LOADING */}
           {isLoading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10, mt: 10 }}>
               <CircularProgress sx={{ color: '#ffda6a', mb: 2 }} />
               <Typography sx={{ color: '#fff', fontWeight: 600 }}>Đang tải sản phẩm siêu sale...</Typography>
             </Box>
